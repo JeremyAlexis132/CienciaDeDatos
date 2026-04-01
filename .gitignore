@@ -1,0 +1,27 @@
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+
+# Archivos de Jupyter y Python
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+*.pyo
+
+# Datos crudos (¡Importante! No subir CSVs pesados de 350k filas a Git)
+src/data/*.csv
+src/data/*.xlsx
+data/*.csv
+
+# Imágenes generadas y salidas de Jupyter (opcional, coméntalo si quieres subir las gráficas generadas)
+outputs/
+*.png
+*.jpg
+*.html
+
+# Archivos de VS Code y SO
+.vscode/
+.DS_Store
+Thumbs.db
