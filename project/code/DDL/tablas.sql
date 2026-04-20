@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS cor_project.bronze.raw_swell_metrics (
 CREATE TABLE IF NOT EXISTS cor_project.silver.swell_metrics (
     coast_name STRING,
     datetime TIMESTAMP,
-    year INTEGER COMMENT,
+    year INTEGER,
     wind_speed_ms DOUBLE,
     wind_direction_deg DOUBLE,
     wave_height_m DOUBLE,
