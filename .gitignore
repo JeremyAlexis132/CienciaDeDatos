@@ -25,3 +25,7 @@ outputs/
 .vscode/
 .DS_Store
 Thumbs.db
+.databricks
+
+# Archivos data bricks
+databricks.yml
