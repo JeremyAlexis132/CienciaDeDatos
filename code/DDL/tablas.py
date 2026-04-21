@@ -1,7 +1,10 @@
-import os
+import argparse
 
-ambiente = os.getenv("DATABRICKS_BUNDLE_TARGET")
+parser = argparse.ArgumentParser()
+parser.add_argument("--ambiente")
+args = parser.parse_args()
 
+ambiente = args.ambiente
 print(ambiente)
 
 # Tablas de la capa Bronze
