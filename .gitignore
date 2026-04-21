@@ -26,6 +26,8 @@ outputs/
 .DS_Store
 Thumbs.db
 .databricks
+.env
 
 # Archivos data bricks
 databricks.yml
+.databricks
