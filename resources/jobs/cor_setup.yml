@@ -31,7 +31,7 @@ resources:
           environment_key: Default
         - task_key: setup_volumes
           depends_on:
-            - task_key: setup_tables
+            - task_key: setup_schemas
           spark_python_task:
             python_file: ../../code/DDL/volumenes.py
             parameters:
