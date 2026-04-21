@@ -10,7 +10,7 @@ print(ambiente)
 # Tablas de la capa Bronze
 spark.sql(
     f"""
-        CREATE TABLE IF NOT EXISTS cor_dev.bronze.raw_swell_metrics (
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.bronze.raw_swell_metrics (
             data STRING,
             source_file STRING,
             ingestion_timestamp TIMESTAMP
@@ -21,7 +21,7 @@ spark.sql(
 # Tablas de la capa Silver
 spark.sql(
     f"""
-        CREATE TABLE IF NOT EXISTS cor_dev.silver.swell_metrics (
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.silver.swell_metrics (
             coast_name STRING,
             datetime TIMESTAMP,
             year INTEGER,
@@ -40,7 +40,7 @@ spark.sql(
 
 spark.sql(
     f"""
-        CREATE TABLE IF NOT EXISTS cor_dev.silver.quarantine_swell_metrics (
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.silver.quarantine_swell_metrics (
             data STRING,
             source_file STRING,
             error_reason STRING,
