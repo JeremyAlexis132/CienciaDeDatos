@@ -1,12 +1,12 @@
 resources:
   jobs:
     cor_dev_setup:
-      name: cor_proj_setup
+      name: cor_dev_setup
       tasks:
         - task_key: create_schemas
           sql_task:
             file:
-              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/project/code/DDL/esquemas.sql
+              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/code/DDL/esquemas.sql
               source: WORKSPACE
             warehouse_id: 7e4ed7b4d29d0996
           email_notifications:
@@ -19,7 +19,7 @@ resources:
             - task_key: create_schemas
           sql_task:
             file:
-              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/project/code/DDL/volumenes.sql
+              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/code/DDL/volumenes.sql
               source: WORKSPACE
             warehouse_id: 7e4ed7b4d29d0996
           email_notifications:
@@ -32,7 +32,7 @@ resources:
             - task_key: create_volumenes
           sql_task:
             file:
-              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/project/code/DDL/tablas.sql
+              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/code/DDL/tablas.sql
               source: WORKSPACE
             warehouse_id: 7e4ed7b4d29d0996
           email_notifications:
