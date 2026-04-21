@@ -1,0 +1,44 @@
+resources:
+  jobs:
+    cor_dev_setup:
+      name: cor_proj_setup
+      tasks:
+        - task_key: create_schemas
+          sql_task:
+            file:
+              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/project/code/DDL/esquemas.sql
+              source: WORKSPACE
+            warehouse_id: 7e4ed7b4d29d0996
+          email_notifications:
+            on_success:
+              - guillermo.hre@gmail.com
+            on_failure:
+              - guillermo.hre@gmail.com
+        - task_key: create_volumenes
+          depends_on:
+            - task_key: create_schemas
+          sql_task:
+            file:
+              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/project/code/DDL/volumenes.sql
+              source: WORKSPACE
+            warehouse_id: 7e4ed7b4d29d0996
+          email_notifications:
+            on_success:
+              - guillermo.hre@gmail.com
+            on_failure:
+              - guillermo.hre@gmail.com
+        - task_key: create_tables
+          depends_on:
+            - task_key: create_volumenes
+          sql_task:
+            file:
+              path: /Workspace/Users/guillermo.hre@gmail.com/CienciaDeDatos/project/code/DDL/tablas.sql
+              source: WORKSPACE
+            warehouse_id: 7e4ed7b4d29d0996
+          email_notifications:
+            on_success:
+              - guillermo.hre@gmail.com
+            on_failure:
+              - guillermo.hre@gmail.com
+      queue:
+        enabled: true
