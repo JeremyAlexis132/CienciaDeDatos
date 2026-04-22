@@ -13,7 +13,7 @@ df = (
         .format("cloudFiles")
         .option("cloudFiles.format", "text")
         .option("cloudFiles.useIncrementalListing", "true")
-        .load(f"/Volumes/cor_{ambiente}/bronze/landing/data/")
+        .load(f"/Volumes/cor_{ambiente}/bronze/data/landing/")
 )
 
 df_transformed = df.select(
@@ -26,6 +26,6 @@ df_transformed = df.select(
     df_transformed.writeStream
         .format("delta")
         .trigger(availableNow=True)
-        .option("checkpointLocation", f"/Volumes/cor_{ambiente}/bronze/landing/checkpoints/raw_swell_metrics")
+        .option("checkpointLocation", f"/Volumes/cor_{ambiente}/bronze/data/checkpoints/raw_swell_metrics")
         .toTable(f"cor_{ambiente}.bronze.raw_swell_metrics")
 )
