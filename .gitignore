@@ -14,6 +14,8 @@ __pycache__/
 src/data/*.csv
 src/data/*.xlsx
 data/*.csv
+src/data/DataSetsMar/*.txt
+src/data/DataSetsMar/*.pdf
 
 # Imágenes generadas y salidas de Jupyter (opcional, coméntalo si quieres subir las gráficas generadas)
 outputs/
