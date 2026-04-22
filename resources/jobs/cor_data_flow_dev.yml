@@ -19,6 +19,18 @@ resources:
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
+        - task_key: bronze_to_silver
+          spark_python_task:
+            python_file: ../../code/ELT/bronze_to_silver.py
+            parameters:
+              - "--ambiente"
+              - "dev"
+          email_notifications:
+            on_success:
+              - guillermo.hre@gmail.com
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
       queue:
         enabled: true
       environments:
