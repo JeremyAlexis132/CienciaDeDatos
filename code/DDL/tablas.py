@@ -31,7 +31,8 @@ spark.sql(
             wave_direction_deg DOUBLE,
             wave_period_s DOUBLE,
             source_file STRING,
-            ingestion_timestamp TIMESTAMP
+            ingestion_timestamp TIMESTAMP,
+            transformation_timestamp TIMESTAMP
         )
         USING DELTA
         PARTITIONED BY (coast_name, year)
@@ -44,7 +45,8 @@ spark.sql(
             data STRING,
             source_file STRING,
             error_reason STRING,
-            ingestion_timestamp TIMESTAMP
+            ingestion_timestamp TIMESTAMP,
+            transformation_timestamp TIMESTAMP
         )
         USING DELTA
     """
