@@ -1,0 +1,28 @@
+resources:
+  jobs:
+    cor_data_flow_dev:
+      name: cor_data_flow_dev
+      trigger:
+        pause_status: UNPAUSED
+        file_arrival:
+          url: /Volumes/cor_dev/bronze/data/landing/
+      tasks:
+        - task_key: landing_to_bronze
+          spark_python_task:
+            python_file: ../../code/ELT/landing_to_bronze.py
+            parameters:
+              - "--ambiente"
+              - "dev"
+          email_notifications:
+            on_success:
+              - guillermo.hre@gmail.com
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED
