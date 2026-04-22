@@ -5,7 +5,7 @@ resources:
       tasks:
         - task_key: setup_schemas
           spark_python_task:
-            python_file: ../../code/DDL/esquemas.py
+            python_file: ../../code/DDL/create_schemas.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
@@ -19,7 +19,7 @@ resources:
           depends_on:
             - task_key: setup_schemas
           spark_python_task:
-            python_file: ../../code/DDL/tablas.py
+            python_file: ../../code/DDL/create_tables.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
@@ -33,7 +33,7 @@ resources:
           depends_on:
             - task_key: setup_schemas
           spark_python_task:
-            python_file: ../../code/DDL/volumenes.py
+            python_file: ../../code/DDL/create_volumes.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
