@@ -30,8 +30,8 @@ spark.sql(
             wave_height_m FLOAT,
             wave_direction_deg FLOAT,
             wave_period_s FLOAT,
-            source_file STRING,
             ingestion_timestamp TIMESTAMP,
+            source_file STRING,
             transformation_timestamp TIMESTAMP
         )
         USING DELTA
