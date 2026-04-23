@@ -1,0 +1,45 @@
+resources:
+  jobs:
+    cor_clear:
+      name: cor_clear
+      tasks:
+        - task_key: drop_tables
+          spark_python_task:
+            python_file: ../../code/DDL/drop_tables.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+        - task_key: drop_volumes
+          spark_python_task:
+            python_file: ../../code/DDL/drop_volumes.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+        - task_key: drop_schemas
+          depends_on:
+            - task_key: drop_volumes
+            - task_key: drop_tables
+          spark_python_task:
+            python_file: ../../code/DDL/drop_schemas.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED

@@ -1,0 +1,46 @@
+resources:
+  jobs:
+    cor_setup:
+      name: cor_setup
+      tasks:
+        - task_key: setup_schemas
+          spark_python_task:
+            python_file: ../../code/DDL/create_schemas.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+        - task_key: setup_tables
+          depends_on:
+            - task_key: setup_schemas
+          spark_python_task:
+            python_file: ../../code/DDL/create_tables.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+        - task_key: setup_volumes
+          depends_on:
+            - task_key: setup_schemas
+          spark_python_task:
+            python_file: ../../code/DDL/create_volumes.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED

@@ -1,0 +1,32 @@
+# This is a Databricks asset bundle definition for CienciaDeDatos.
+# The Databricks extension requires databricks.yml configuration file.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+
+bundle:
+  name: CienciaDeDatos
+
+include:
+  - resources/*.yml
+  - resources/*/*.yml
+
+variables:
+  catalog_name:
+    description: "Nombre del catálogo según el ambiente"
+    default: dev
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog_name: dev
+    workspace:
+      host: https://<workspace-id>.cloud.databricks.com
+
+  project:
+    mode: production
+    default: false
+    variables:
+      catalog_name: project
+    workspace:
+      host: https://<workspace-id>.cloud.databricks.com
