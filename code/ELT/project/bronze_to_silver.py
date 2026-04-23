@@ -60,8 +60,8 @@ df_bronze_raw_swell_metrics_transformed = (
         col("cols")[5].cast("double").alias("wave_height_m"),
         col("cols")[6].cast("double").alias("wave_direction_deg"),
         col("cols")[7].cast("double").alias("wave_period_s"),
-        col("source_file"),
         col("ingestion_timestamp"),
+        col("source_file"),
         current_timestamp().alias("transformation_timestamp"),
         col("data")
     )
@@ -93,8 +93,8 @@ df_bronze_raw_swell_metrics_transformed = (
         col("cols")[5].cast("double").alias("wave_height_m"),
         col("cols")[6].cast("double").alias("wave_direction_deg"),
         col("cols")[7].cast("double").alias("wave_period_s"),
-        col("source_file"),
         col("ingestion_timestamp"),
+        col("source_file"),
         current_timestamp().alias("transformation_timestamp"),
         col("data")
     )
