@@ -2,10 +2,6 @@ resources:
   jobs:
     cor_data_flow_project:
       name: cor_data_flow_project
-      trigger:
-        pause_status: UNPAUSED
-        file_arrival:
-          url: /Volumes/cor_project/bronze/data/landing/
       tasks:
         - task_key: landing_to_bronze
           spark_python_task:
