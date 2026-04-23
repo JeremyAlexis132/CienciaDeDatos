@@ -2,32 +2,20 @@ resources:
   jobs:
     cor_data_flow_dev:
       name: cor_data_flow_dev
-      trigger:
-        pause_status: UNPAUSED
-        file_arrival:
-          url: /Volumes/cor_dev/bronze/data/landing/
       tasks:
         - task_key: landing_to_bronze
-          spark_python_task:
-            python_file: ../../code/ELT/landing_to_bronze.py
-            parameters:
-              - "--ambiente"
-              - "dev"
-          email_notifications:
-            on_failure:
-              - guillermo.hre@gmail.com
+          notebook_task:
+            notebook_path: ../../code/ELT/dev/landing_to_bronze.ipynb
+            base_parameters:
+              ambiente: dev
           environment_key: Default
         - task_key: bronze_to_silver
           depends_on:
-            - task_key: landing_to_bronze
-          spark_python_task:
-            python_file: ../../code/ELT/bronze_to_silver.py
-            parameters:
-              - "--ambiente"
-              - "dev"
-          email_notifications:
-            on_failure:
-              - guillermo.hre@gmail.com
+              - task_key: landing_to_bronze
+          notebook_task:
+            notebook_path: ../../code/ELT/dev/bronze_to_silver.ipynb
+            base_parameters:
+              ambiente: dev
           environment_key: Default
       queue:
         enabled: true
