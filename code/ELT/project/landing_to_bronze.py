@@ -16,14 +16,14 @@ file = (
         .load(f"/Volumes/cor_{ambiente}/bronze/data/landing/")
 )
 
-df_raw_swell_metrics = file.select(
+df_bronze_raw_swell_metrics = file.select(
     col("value").alias("data"),
     col("_metadata.file_path").alias("source_file"),
     current_timestamp().alias("ingestion_timestamp")
 )
 
 (
-    df_raw_swell_metrics.writeStream
+    df_bronze_raw_swell_metrics.writeStream
         .format("delta")
         .trigger(availableNow=True)
         .option("checkpointLocation", f"/Volumes/cor_{ambiente}/bronze/data/checkpoints/raw_swell_metrics")

@@ -25,14 +25,17 @@ df_bronze_raw_swell_metrics_split_cols = (
 
 df_bronze_raw_swell_metrics_pre_transform = (
     df_bronze_raw_swell_metrics_split_cols.withColumn(
+        "number_of_columns", size(col("cols"))
+    ).withColumn(
         "flagg_passed_struct_check", 
-        size(col("cols")) == 12
+        size(col("cols")).isin(12, 13)
     )
 )
 
 df_bronze_raw_swell_metrics_transformed = (
     df_bronze_raw_swell_metrics_pre_transform.filter(
-        col("flagg_passed_struct_check") == True
+        (col("flagg_passed_struct_check") == True) &
+        (col("number_of_columns") == 12)
     ).select(
         lower(
             substring_index(
@@ -52,11 +55,44 @@ df_bronze_raw_swell_metrics_transformed = (
             col("cols")[2].cast("double").cast("int")
         ), "yyyy-M-d H").alias("datetime"),
         col("cols")[11].cast("double").cast("int").alias("year"),
-        (floor(col("cols")[3].cast("double") * 100) / 100).cast("float").alias("wind_speed_ms"),
-        (floor(col("cols")[4].cast("double") * 100) / 100).cast("float").alias("wind_direction_deg"),
-        (floor(col("cols")[5].cast("double") * 100) / 100).cast("float").alias("wave_height_m"),
-        (floor(col("cols")[6].cast("double") * 100) / 100).cast("float").alias("wave_direction_deg"),
-        (floor(col("cols")[7].cast("double") * 100) / 100).cast("float").alias("wave_period_s"),
+        col("cols")[3].cast("double").alias("wind_speed_ms"),
+        col("cols")[4].cast("double").alias("wind_direction_deg"),
+        col("cols")[5].cast("double").alias("wave_height_m"),
+        col("cols")[6].cast("double").alias("wave_direction_deg"),
+        col("cols")[7].cast("double").alias("wave_period_s"),
+        col("source_file"),
+        col("ingestion_timestamp"),
+        current_timestamp().alias("transformation_timestamp"),
+        col("data")
+    )
+).unionByName(
+    df_bronze_raw_swell_metrics_pre_transform.filter(
+        (col("flagg_passed_struct_check") == True) &
+        (col("number_of_columns") == 13)
+    ).select(
+        lower(
+            substring_index(
+                substring_index(
+                    col("source_file"), 
+                    "/", 
+                    -1
+                ), 
+                ".", 
+                1
+            )
+        ).alias("coast_name"),
+        to_timestamp(concat(
+            col("cols")[12].cast("double").cast("int"), lit("-"),
+            col("cols")[0].cast("double").cast("int"), lit("-"),
+            col("cols")[1].cast("double").cast("int"), lit(" "),
+            col("cols")[2].cast("double").cast("int")
+        ), "yyyy-M-d H").alias("datetime"),
+        col("cols")[12].cast("double").cast("int").alias("year"),
+        col("cols")[3].cast("double").alias("wind_speed_ms"),
+        col("cols")[4].cast("double").alias("wind_direction_deg"),
+        col("cols")[5].cast("double").alias("wave_height_m"),
+        col("cols")[6].cast("double").alias("wave_direction_deg"),
+        col("cols")[7].cast("double").alias("wave_period_s"),
         col("source_file"),
         col("ingestion_timestamp"),
         current_timestamp().alias("transformation_timestamp"),
@@ -102,14 +138,6 @@ df_silver_swell_metrics = df_bronze_raw_swell_metrics_quality.filter(col("flagg_
         "flagg_passed_wind_direction_deg_checks", "flagg_passed_wave_height_m_checks", "flagg_passed_wave_direction_deg_checks",
         "flagg_passed_wave_period_s_checks", "flagg_passed_quality_checks"
     )
-
-(
-    df_silver_swell_metrics.writeStream
-        .format("delta")
-        .trigger(availableNow=True)
-        .option("checkpointLocation", f"/Volumes/cor_{ambiente}/silver/data/checkpoints/swell_metrics")
-        .toTable(f"cor_{ambiente}.silver.swell_metrics")
-)
 
 df_quarantine_swell_metrics = (
     df_bronze_raw_swell_metrics_pre_transform.filter(
@@ -158,6 +186,14 @@ df_quarantine_swell_metrics = (
             col("transformation_timestamp")
         )
     )
+)
+
+(
+    df_silver_swell_metrics.writeStream
+        .format("delta")
+        .trigger(availableNow=True)
+        .option("checkpointLocation", f"/Volumes/cor_{ambiente}/silver/data/checkpoints/swell_metrics")
+        .toTable(f"cor_{ambiente}.silver.swell_metrics")
 )
 
 (

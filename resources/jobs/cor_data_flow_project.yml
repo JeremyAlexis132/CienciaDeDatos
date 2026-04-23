@@ -9,7 +9,7 @@ resources:
       tasks:
         - task_key: landing_to_bronze
           spark_python_task:
-            python_file: ../../code/ELT/landing_to_bronze.py
+            python_file: ../../code/ELT/project/landing_to_bronze.py
             parameters:
               - "--ambiente"
               - "project"
@@ -21,7 +21,7 @@ resources:
           depends_on:
             - task_key: landing_to_bronze
           spark_python_task:
-            python_file: ../../code/ELT/bronze_to_silver.py
+            python_file: ../../code/ELT/project/bronze_to_silver.py
             parameters:
               - "--ambiente"
               - "project"
