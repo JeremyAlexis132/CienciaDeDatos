@@ -10,8 +10,6 @@ resources:
               - "--ambiente"
               - "${var.catalog_name}"
           email_notifications:
-            on_success:
-              - guillermo.hre@gmail.com
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
@@ -22,8 +20,6 @@ resources:
               - "--ambiente"
               - "${var.catalog_name}"
           email_notifications:
-            on_success:
-              - guillermo.hre@gmail.com
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
@@ -37,8 +33,6 @@ resources:
               - "--ambiente"
               - "${var.catalog_name}"
           email_notifications:
-            on_success:
-              - guillermo.hre@gmail.com
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default

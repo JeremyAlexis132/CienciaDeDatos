@@ -1,6 +1,6 @@
 from pyspark.sql.functions import (
     current_date, current_timestamp, col, to_timestamp, 
-    concat, lit, split, trim, lower, substring_index, size, when
+    concat, lit, split, trim, lower, substring_index, size, when, floor
 )
 import argparse
 
@@ -19,7 +19,7 @@ df_bronze_raw_swell_metrics = (
 df_bronze_raw_swell_metrics_split_cols = (
     df_bronze_raw_swell_metrics.withColumn(
         "cols", 
-        split(trim(col("data")), "\s+")
+        split(trim(col("data")), r"\s+")
     )
 )
 
@@ -52,11 +52,11 @@ df_bronze_raw_swell_metrics_transformed = (
             col("cols")[2].cast("double").cast("int")
         ), "yyyy-M-d H").alias("datetime"),
         col("cols")[11].cast("double").cast("int").alias("year"),
-        col("cols")[3].cast("double").alias("wind_speed_ms"),
-        col("cols")[4].cast("double").alias("wind_direction_deg"),
-        col("cols")[5].cast("double").alias("wave_height_m"),
-        col("cols")[6].cast("double").alias("wave_direction_deg"),
-        col("cols")[7].cast("double").alias("wave_period_s"),
+        (floor(col("cols")[3].cast("double") * 100) / 100).cast("float").alias("wind_speed_ms"),
+        (floor(col("cols")[4].cast("double") * 100) / 100).cast("float").alias("wind_direction_deg"),
+        (floor(col("cols")[5].cast("double") * 100) / 100).cast("float").alias("wave_height_m"),
+        (floor(col("cols")[6].cast("double") * 100) / 100).cast("float").alias("wave_direction_deg"),
+        (floor(col("cols")[7].cast("double") * 100) / 100).cast("float").alias("wave_period_s"),
         col("source_file"),
         col("ingestion_timestamp"),
         current_timestamp().alias("transformation_timestamp"),
