@@ -1,6 +1,6 @@
 from pyspark.sql.functions import (
     current_date, current_timestamp, col, to_timestamp, 
-    concat, lit, split, trim, lower, substring_index, size, when, floor
+    concat, lit, split, trim, lower, substring_index, size, when, round, sin, cos, radians
 )
 import argparse
 
@@ -55,11 +55,11 @@ df_bronze_raw_swell_metrics_transformed = (
             col("cols")[2].cast("double").cast("int")
         ), "yyyy-M-d H").alias("datetime"),
         col("cols")[11].cast("double").cast("int").alias("year"),
-        col("cols")[3].cast("double").alias("wind_speed_ms"),
-        col("cols")[4].cast("double").alias("wind_direction_deg"),
-        col("cols")[5].cast("double").alias("wave_height_m"),
-        col("cols")[6].cast("double").alias("wave_direction_deg"),
-        col("cols")[7].cast("double").alias("wave_period_s"),
+        round(col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
+        round(col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
+        round(col("cols")[5], 2).cast("float").alias("wave_height_m"),
+        round(col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
+        round(col("cols")[7], 2).cast("float").alias("wave_period_s"),
         col("ingestion_timestamp"),
         col("source_file"),
         current_timestamp().alias("transformation_timestamp"),
@@ -88,20 +88,31 @@ df_bronze_raw_swell_metrics_transformed = (
             col("cols")[2].cast("double").cast("int")
         ), "yyyy-M-d H").alias("datetime"),
         col("cols")[12].cast("double").cast("int").alias("year"),
-        col("cols")[3].cast("double").alias("wind_speed_ms"),
-        col("cols")[4].cast("double").alias("wind_direction_deg"),
-        col("cols")[5].cast("double").alias("wave_height_m"),
-        col("cols")[6].cast("double").alias("wave_direction_deg"),
-        col("cols")[7].cast("double").alias("wave_period_s"),
+        round(col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
+        round(col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
+        round(col("cols")[5], 2).cast("float").alias("wave_height_m"),
+        round(col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
+        round(col("cols")[7], 2).cast("float").alias("wave_period_s"),
         col("ingestion_timestamp"),
         col("source_file"),
         current_timestamp().alias("transformation_timestamp"),
         col("data")
     )
 )
+df_bronze_raw_swell_metrics_add_u_v = (
+    df_bronze_raw_swell_metrics_transformed.withColumn(
+        "wind_u", round(col("wind_speed_ms") * sin(radians(col("wind_direction_deg"))), 2).alias("wind_u")
+    ).withColumn(
+        "wind_v", round(col("wind_speed_ms") * cos(radians(col("wind_direction_deg"))), 2).alias("wind_v")
+    ).withColumn(
+        "wave_u", round(col("wave_height_m") * sin(radians(col("wave_direction_deg"))), 2).alias("wave_u")
+    ).withColumn(
+        "wave_v", round(col("wave_height_m") * cos(radians(col("wave_direction_deg"))), 2).alias("wave_v")
+    )
+)
 
 df_bronze_raw_swell_metrics_quality = (
-    df_bronze_raw_swell_metrics_transformed.withColumn(
+    df_bronze_raw_swell_metrics_add_u_v.withColumn(
         "flagg_passed_datetime_check",
         (col("datetime").isNotNull()) &
         (col("datetime") >= "1950-01-01") &
