@@ -1,7 +1,5 @@
-from pyspark.sql.functions import (
-    current_date, current_timestamp, col, to_timestamp, 
-    concat, lit, split, trim, lower, substring_index, size, when, round, sin, cos, radians
-)
+from pyparsing import col
+from pyspark.sql import functions as F
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -19,28 +17,28 @@ df_bronze_raw_swell_metrics = (
 df_bronze_raw_swell_metrics_split_cols = (
     df_bronze_raw_swell_metrics.withColumn(
         "cols", 
-        split(trim(col("data")), r"\s+")
+        F.split(F.trim(F.col("data")), r"\s+")
     )
 )
 
 df_bronze_raw_swell_metrics_pre_transform = (
     df_bronze_raw_swell_metrics_split_cols.withColumn(
-        "number_of_columns", size(col("cols"))
+        "number_of_columns", F.size(F.col("cols"))
     ).withColumn(
         "flagg_passed_struct_check", 
-        size(col("cols")).isin(12, 13)
+        F.size(F.col("cols")).isin(12, 13)
     )
 )
 
 df_bronze_raw_swell_metrics_transformed = (
     df_bronze_raw_swell_metrics_pre_transform.filter(
-        (col("flagg_passed_struct_check") == True) &
-        (col("number_of_columns") == 12)
+        (F.col("flagg_passed_struct_check") == True) &
+        (F.col("number_of_columns") == 12)
     ).select(
-        lower(
-            substring_index(
-                substring_index(
-                    col("source_file"), 
+        F.lower(
+            F.substring_index(
+                F.substring_index(
+                    F.col("source_file"), 
                     "/", 
                     -1
                 ), 
@@ -48,32 +46,32 @@ df_bronze_raw_swell_metrics_transformed = (
                 1
             )
         ).alias("coast_name"),
-        to_timestamp(concat(
-            col("cols")[11].cast("double").cast("int"), lit("-"),
-            col("cols")[0].cast("double").cast("int"), lit("-"),
-            col("cols")[1].cast("double").cast("int"), lit(" "),
-            col("cols")[2].cast("double").cast("int")
+        F.to_timestamp(F.concat(
+            F.col("cols")[11].cast("double").cast("int"), F.lit("-"),
+            F.col("cols")[0].cast("double").cast("int"), F.lit("-"),
+            F.col("cols")[1].cast("double").cast("int"), F.lit(" "),
+            F.col("cols")[2].cast("double").cast("int")
         ), "yyyy-M-d H").alias("datetime"),
-        col("cols")[11].cast("double").cast("int").alias("year"),
-        round(col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
-        round(col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
-        round(col("cols")[5], 2).cast("float").alias("wave_height_m"),
-        round(col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
-        round(col("cols")[7], 2).cast("float").alias("wave_period_s"),
-        col("ingestion_timestamp"),
-        col("source_file"),
-        current_timestamp().alias("transformation_timestamp"),
-        col("data")
+        F.col("cols")[11].cast("double").cast("int").alias("year"),
+        F.round(F.col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
+        F.round(F.col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
+        F.round(F.col("cols")[5], 2).cast("float").alias("wave_height_m"),
+        F.round(F.col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
+        F.round(F.col("cols")[7], 2).cast("float").alias("wave_period_s"),
+        F.col("ingestion_timestamp"),
+        F.col("source_file"),
+        F.current_timestamp().alias("transformation_timestamp"),
+        F.col("data")
     )
 ).unionByName(
     df_bronze_raw_swell_metrics_pre_transform.filter(
-        (col("flagg_passed_struct_check") == True) &
-        (col("number_of_columns") == 13)
+        (F.col("flagg_passed_struct_check") == True) &
+        (F.col("number_of_columns") == 13)
     ).select(
-        lower(
-            substring_index(
-                substring_index(
-                    col("source_file"), 
+        F.lower(
+            F.substring_index(
+                F.substring_index(
+                    F.col("source_file"), 
                     "/", 
                     -1
                 ), 
@@ -81,69 +79,69 @@ df_bronze_raw_swell_metrics_transformed = (
                 1
             )
         ).alias("coast_name"),
-        to_timestamp(concat(
-            col("cols")[12].cast("double").cast("int"), lit("-"),
-            col("cols")[0].cast("double").cast("int"), lit("-"),
-            col("cols")[1].cast("double").cast("int"), lit(" "),
-            col("cols")[2].cast("double").cast("int")
+        F.to_timestamp(F.concat(
+            F.col("cols")[12].cast("double").cast("int"), F.lit("-"),
+            F.col("cols")[0].cast("double").cast("int"), F.lit("-"),
+            F.col("cols")[1].cast("double").cast("int"), F.lit(" "),
+            F.col("cols")[2].cast("double").cast("int")
         ), "yyyy-M-d H").alias("datetime"),
-        col("cols")[12].cast("double").cast("int").alias("year"),
-        round(col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
-        round(col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
-        round(col("cols")[5], 2).cast("float").alias("wave_height_m"),
-        round(col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
-        round(col("cols")[7], 2).cast("float").alias("wave_period_s"),
-        col("ingestion_timestamp"),
-        col("source_file"),
-        current_timestamp().alias("transformation_timestamp"),
-        col("data")
+        F.col("cols")[12].cast("double").cast("int").alias("year"),
+        F.round(F.col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
+        F.round(F.col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
+        F.round(F.col("cols")[5], 2).cast("float").alias("wave_height_m"),
+        F.round(F.col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
+        F.round(F.col("cols")[7], 2).cast("float").alias("wave_period_s"),
+        F.col("ingestion_timestamp"),
+        F.col("source_file"),
+        F.current_timestamp().alias("transformation_timestamp"),
+        F.col("data")
     )
 )
 df_bronze_raw_swell_metrics_add_u_v = (
     df_bronze_raw_swell_metrics_transformed.withColumn(
-        "wind_u", round(col("wind_speed_ms") * sin(radians(col("wind_direction_deg"))), 2).alias("wind_u")
+        "wind_u", F.round(F.col("wind_speed_ms") * F.sin(F.radians(F.col("wind_direction_deg"))), 2).alias("wind_u")
     ).withColumn(
-        "wind_v", round(col("wind_speed_ms") * cos(radians(col("wind_direction_deg"))), 2).alias("wind_v")
+        "wind_v", F.round(F.col("wind_speed_ms") * F.cos(F.radians(F.col("wind_direction_deg"))), 2).alias("wind_v")
     ).withColumn(
-        "wave_u", round(col("wave_height_m") * sin(radians(col("wave_direction_deg"))), 2).alias("wave_u")
+        "wave_u", F.round(F.col("wave_height_m") * F.sin(F.radians(F.col("wave_direction_deg"))), 2).alias("wave_u")
     ).withColumn(
-        "wave_v", round(col("wave_height_m") * cos(radians(col("wave_direction_deg"))), 2).alias("wave_v")
+        "wave_v", F.round(F.col("wave_height_m") * F.cos(F.radians(F.col("wave_direction_deg"))), 2).alias("wave_v")
     )
 )
 
 df_bronze_raw_swell_metrics_quality = (
     df_bronze_raw_swell_metrics_add_u_v.withColumn(
         "flagg_passed_datetime_check",
-        (col("datetime").isNotNull()) &
-        (col("datetime") >= "1950-01-01") &
-        (col("datetime") <= current_date())
+        (F.col("datetime").isNotNull()) &
+        (F.col("datetime") >= "1950-01-01") &
+        (F.col("datetime") <= F.current_date())
     ).withColumn(
         "flagg_passed_wind_speed_ms_checks",
-        (col("wind_speed_ms").between(0, 100))
+        (F.col("wind_speed_ms").between(0, 100))
     ).withColumn(
         "flagg_passed_wind_direction_deg_checks",
-        (col("wind_direction_deg").between(0, 360))
+        (F.col("wind_direction_deg").between(0, 360))
     ).withColumn(
         "flagg_passed_wave_height_m_checks",
-        (col("wave_height_m").between(0, 50))
+        (F.col("wave_height_m").between(0, 50))
     ).withColumn(
         "flagg_passed_wave_direction_deg_checks",
-        (col("wave_direction_deg").between(0, 360))
+        (F.col("wave_direction_deg").between(0, 360))
     ).withColumn(
         "flagg_passed_wave_period_s_checks",
-        (col("wave_period_s").between(0, 100))
+        (F.col("wave_period_s").between(0, 100))
     ).withColumn(
         "flagg_passed_quality_checks",
-        (col("flagg_passed_datetime_check")) &
-        (col("flagg_passed_wind_speed_ms_checks")) &
-        (col("flagg_passed_wind_direction_deg_checks")) &
-        (col("flagg_passed_wave_height_m_checks")) &
-        (col("flagg_passed_wave_direction_deg_checks")) &
-        (col("flagg_passed_wave_period_s_checks"))
+        (F.col("flagg_passed_datetime_check")) &
+        (F.col("flagg_passed_wind_speed_ms_checks")) &
+        (F.col("flagg_passed_wind_direction_deg_checks")) &
+        (F.col("flagg_passed_wave_height_m_checks")) &
+        (F.col("flagg_passed_wave_direction_deg_checks")) &
+        (F.col("flagg_passed_wave_period_s_checks"))
     )
 )
 
-df_silver_swell_metrics = df_bronze_raw_swell_metrics_quality.filter(col("flagg_passed_quality_checks") == True) \
+df_silver_swell_metrics = df_bronze_raw_swell_metrics_quality.filter(F.col("flagg_passed_quality_checks") == True) \
     .drop(
         "data", "flagg_passed_datetime_check", "flagg_passed_wind_speed_ms_checks",
         "flagg_passed_wind_direction_deg_checks", "flagg_passed_wave_height_m_checks", "flagg_passed_wave_direction_deg_checks",
@@ -152,49 +150,51 @@ df_silver_swell_metrics = df_bronze_raw_swell_metrics_quality.filter(col("flagg_
 
 df_quarantine_swell_metrics = (
     df_bronze_raw_swell_metrics_pre_transform.filter(
-        col("flagg_passed_struct_check") == False
+        F.col("flagg_passed_struct_check") == False
     ).select(
-        col("data"),
-        col("source_file"),
-        lit("Error Estructura: La fila no tiene el número correcto de columnas").alias("error_reason"),
-        col("ingestion_timestamp"),
-        current_timestamp().alias("transformation_timestamp")
+        F.col("data"),
+        F.col("source_file"),
+        F.lit("Error Estructura: La fila no tiene el número correcto de columnas").alias("error_reason"),
+        F.col("ingestion_timestamp"),
+        F.current_timestamp().alias("transformation_timestamp"),
+        F.lit(False).alias("resolved")
     )
 ).unionByName(
     (
         df_bronze_raw_swell_metrics_quality.filter(
-            col("flagg_passed_quality_checks") == False
+            F.col("flagg_passed_quality_checks") == False
         ).select(
-            col("data"),
-            col("source_file"),
-            concat(
-                when(
-                    ~col("flagg_passed_datetime_check"), 
-                    lit("Fecha invalida; ")
-                ).otherwise(lit("")),
-                when(
-                    ~col("flagg_passed_wind_speed_ms_checks"), 
-                    lit("Viento fuera de rango; ")
-                ).otherwise(lit("")),
-                when(
-                    ~col("flagg_passed_wind_direction_deg_checks"), 
-                    lit("Dir. Viento fuera de rango; ")
-                ).otherwise(lit("")),
-                when(
-                    ~col("flagg_passed_wave_height_m_checks"), 
-                    lit("Altura ola fuera de rango; ")
-                ).otherwise(lit("")),
-                when(
-                    ~col("flagg_passed_wave_direction_deg_checks"), 
-                    lit("Dir. Ola fuera de rango; ")
-                ).otherwise(lit("")),
-                when(
-                    ~col("flagg_passed_wave_period_s_checks"), 
-                    lit("Periodo ola fuera de rango; ")
-                ).otherwise(lit(""))
+            F.col("data"),
+            F.col("source_file"),
+            F.concat(
+                F.when(
+                    ~F.col("flagg_passed_datetime_check"), 
+                    F.lit("Fecha invalida; ")
+                ).otherwise(F.lit("")),
+                F.when(
+                    ~F.col("flagg_passed_wind_speed_ms_checks"), 
+                    F.lit("Viento fuera de rango; ")
+                ).otherwise(F.lit("")),
+                F.when(
+                    ~F.col("flagg_passed_wind_direction_deg_checks"), 
+                    F.lit("Dir. Viento fuera de rango; ")
+                ).otherwise(F.lit("")),
+                F.when(
+                    ~F.col("flagg_passed_wave_height_m_checks"), 
+                    F.lit("Altura ola fuera de rango; ")
+                ).otherwise(F.lit("")),
+                F.when(
+                    ~F.col("flagg_passed_wave_direction_deg_checks"), 
+                    F.lit("Dir. Ola fuera de rango; ")
+                ).otherwise(F.lit("")),
+                F.when(
+                    ~F.col("flagg_passed_wave_period_s_checks"), 
+                    F.lit("Periodo ola fuera de rango; ")
+                ).otherwise(F.lit(""))
             ).alias("error_reason"),
-            col("ingestion_timestamp"),
-            col("transformation_timestamp")
+            F.col("ingestion_timestamp"),
+            F.col("transformation_timestamp"),
+            F.lit(False).alias("resolved")
         )
     )
 )
