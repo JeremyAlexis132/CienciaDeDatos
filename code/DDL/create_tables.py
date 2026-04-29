@@ -96,5 +96,41 @@ spark.sql(
 )
 
 # Tablas de la capa Gold
+spark.sql(
+    f"""
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.gold.wave_daily_summary (
+            date DATE
+                COMMENT 'Fecha de la medición, sin la hora.',
+            coast_name STRING
+                COMMENT 'Nombre de la costa a la que corresponden las métricas de olas.',
+            max_wave_height_m FLOAT
+                COMMENT 'Altura máxima de las olas en metros para la fecha y costa especificadas.',
+            max_wave_period_s FLOAT
+                COMMENT 'Periodo de la ola más alta en segundos para la fecha y costa especificadas.',
+            max_wave_direction_deg FLOAT
+                COMMENT 'Dirección de la ola más alta en grados para la fecha y costa especificadas.',
+            max_wave_wind_speed_ms FLOAT
+                COMMENT 'Velocidad del viento en metros por segundo de la ola más alta para la fecha y costa especificadas.',
+            max_wave_wind_direction_deg FLOAT
+                COMMENT 'Dirección del viento en grados de la ola más alta para la fecha y costa especificadas.',
+            min_wave_height_m FLOAT
+                COMMENT 'Altura mínima de las olas en metros para la fecha y costa especificadas.',
+            min_wave_period_s FLOAT
+                COMMENT 'Periodo de la ola más baja en segundos para la fecha y costa especificadas.',
+            min_wave_direction_deg FLOAT
+                COMMENT 'Dirección de la ola más baja en grados para la fecha y costa especificadas.',
+            min_wave_wind_speed_ms FLOAT
+                COMMENT 'Velocidad del viento en metros por segundo de la ola más baja para la fecha y costa especificadas.',
+            min_wave_wind_direction_deg FLOAT
+                COMMENT 'Dirección del viento en grados de la ola más baja para la fecha y costa especificadas.',
+            avg_wave_height_m FLOAT
+                COMMENT 'Altura promedio de las olas en metros para la fecha y costa especificadas.'
+        )
+            COMMENT 'Tabla con el resumen diario de las métricas de olas para cada costa. Cada registro contiene la fecha, el nombre de la costa, 
+                y las métricas agregadas como la altura máxima, mínima y promedio de las olas, el periodo de la ola más alta y más baja, la dirección de la ola más alta, 
+                y la velocidad del viento asociada a la ola más alta. Esta tabla se genera a partir de los datos transformados en la tabla silver.swell_metrics y se 
+                utiliza para análisis y visualizaciones a nivel diario.'
+    """
+)
 
 # Tablas de la capa ML
