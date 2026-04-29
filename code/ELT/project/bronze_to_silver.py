@@ -7,6 +7,7 @@ parser.add_argument("--ambiente")
 args = parser.parse_args()
 
 ambiente = args.ambiente
+print(ambiente)
 
 df_bronze_raw_swell_metrics = (
     spark.readStream
