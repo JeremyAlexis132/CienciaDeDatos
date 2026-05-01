@@ -25,6 +25,18 @@ resources:
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
+        - task_key: silver_to_wave_daily_summary
+          depends_on:
+            - task_key: bronze_to_silver
+          spark_python_task:
+            python_file: ../../code/ELT/project/silver_to_wave_daily_summary.py
+            parameters:
+              - "--ambiente"
+              - "project"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
       queue:
         enabled: true
       environments:
