@@ -28,3 +28,12 @@ spark.sql(
         CREATE VOLUME IF NOT EXISTS cor_{ambiente}.gold.data
     """
 )
+
+spark.sql(
+    f"""
+        CREATE VOLUME IF NOT EXISTS cor_{ambiente}.ML.models
+    """
+)
+
+volume_path = f"/Volumes/cor_{ambiente}/ML/Models/wave_clasificator"
+dbutils.fs.mkdirs(volume_path)
