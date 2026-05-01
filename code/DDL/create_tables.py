@@ -17,10 +17,11 @@ spark.sql(
                 COMMENT 'Ruta del archivo fuente del cual se extrajo el registro',
             ingestion_timestamp TIMESTAMP
                 COMMENT 'Fecha y hora en que el registro fue ingresado a la tabla bronze.raw_swell_metrics'
-        ) USING DELTA
-            COMMENT 'Tabla para almacenar los datos crudos de métricas de olas, tal como fueron leídos de los archivos CSV. 
-                Cada registro contiene el dato original, la ruta del archivo fuente y la marca de tiempo de ingesta. 
-                Esta tabla sirve como punto de partida para el procesamiento y transformación de los datos en las capas posteriores.'
+        ) 
+        USING DELTA
+        COMMENT 'Tabla para almacenar los datos crudos de métricas de olas, tal como fueron leídos de los archivos CSV. 
+            Cada registro contiene el dato original, la ruta del archivo fuente y la marca de tiempo de ingesta. 
+            Esta tabla sirve como punto de partida para el procesamiento y transformación de los datos en las capas posteriores.'
     """
 )
 
@@ -64,9 +65,9 @@ spark.sql(
         )
         USING DELTA
         PARTITIONED BY (coast_name, year)
-            COMMENT 'Tabla para almacenar las métricas de olas transformadas y listas para su uso en análisis posteriores. 
-                Se partitiona por nombre de costa y año para mejorar el rendimiento de las consultas. Los registros en esta tabla se generan 
-                a partir de los datos crudos en la tabla bronze.raw_swell_metrics, aplicando las transformaciones y calidad de datos.'
+        COMMENT 'Tabla para almacenar las métricas de olas transformadas y listas para su uso en análisis posteriores. 
+            Se partitiona por nombre de costa y año para mejorar el rendimiento de las consultas. Los registros en esta tabla se generan 
+            a partir de los datos crudos en la tabla bronze.raw_swell_metrics, aplicando las transformaciones y calidad de datos.'
     """
 )
 
@@ -88,10 +89,11 @@ spark.sql(
                 COMMENT 'Indica si el registro ha sido revisado y corregido para cumplir con los criterios de calidad. Inicialmente es FALSE, 
                     y se debe actualizar a TRUE una vez que se haya resuelto el problema que causó la cuarentena del registro.'
         )
-            COMMENT 'Tabla con los registros de métricas de olas que no cumplieron con los criterios de calidad durante el proceso de transformación. 
-                Cada registro contiene los datos crudos originales, la ruta del archivo fuente, el motivo del error, las marcas de tiempo de ingesta y 
-                transformación, y un indicador de si el problema ha sido resuelto. Esta tabla permite realizar un seguimiento de los registros problemáticos 
-                y facilita su revisión y corrección para su posterior inclusión en la tabla silver.swell_metrics.'
+        USING DELTA
+        COMMENT 'Tabla con los registros de métricas de olas que no cumplieron con los criterios de calidad durante el proceso de transformación. 
+            Cada registro contiene los datos crudos originales, la ruta del archivo fuente, el motivo del error, las marcas de tiempo de ingesta y 
+            transformación, y un indicador de si el problema ha sido resuelto. Esta tabla permite realizar un seguimiento de los registros problemáticos 
+            y facilita su revisión y corrección para su posterior inclusión en la tabla silver.swell_metrics.'
     """
 )
 
@@ -126,10 +128,11 @@ spark.sql(
             avg_wave_height_m FLOAT
                 COMMENT 'Altura promedio de las olas en metros para la fecha y costa especificadas.'
         )
-            COMMENT 'Tabla con el resumen diario de las métricas de olas para cada costa. Cada registro contiene la fecha, el nombre de la costa, 
-                y las métricas agregadas como la altura máxima, mínima y promedio de las olas, el periodo de la ola más alta y más baja, la dirección de la ola más alta, 
-                y la velocidad del viento asociada a la ola más alta. Esta tabla se genera a partir de los datos transformados en la tabla silver.swell_metrics y se 
-                utiliza para análisis y visualizaciones a nivel diario.'
+        USING DELTA
+        COMMENT 'Tabla con el resumen diario de las métricas de olas para cada costa. Cada registro contiene la fecha, el nombre de la costa, 
+            y las métricas agregadas como la altura máxima, mínima y promedio de las olas, el periodo de la ola más alta y más baja, la dirección de la ola más alta, 
+            y la velocidad del viento asociada a la ola más alta. Esta tabla se genera a partir de los datos transformados en la tabla silver.swell_metrics y se 
+            utiliza para análisis y visualizaciones a nivel diario.'
     """
 )
 
