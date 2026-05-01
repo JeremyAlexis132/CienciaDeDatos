@@ -1,4 +1,3 @@
-from pyparsing import col
 from pyspark.sql import functions as F
 import argparse
 
@@ -114,8 +113,8 @@ df_bronze_raw_swell_metrics_quality = (
     df_bronze_raw_swell_metrics_add_u_v.withColumn(
         "flagg_passed_datetime_check",
         (F.col("datetime").isNotNull()) &
-        (F.col("datetime") >= "1950-01-01") &
-        (F.col("datetime") <= F.current_date())
+        (F.col("datetime") >= "1979-01-01") &
+        (F.col("datetime") < "2019-01-01")
     ).withColumn(
         "flagg_passed_wind_speed_ms_checks",
         (F.col("wind_speed_ms").between(0, 100))
