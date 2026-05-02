@@ -32,3 +32,6 @@ Thumbs.db
 databricks.yml
 .databricks
 .bundle/*
+
+# Archivos de ML
+*.pkl
