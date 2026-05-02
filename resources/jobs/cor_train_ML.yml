@@ -1,0 +1,19 @@
+resources:
+  jobs:
+    cor_train_ML:
+      name: cor_train_ML
+      tasks:
+        - task_key: train_scaler_wave
+          spark_python_task:
+            python_file: ../../code/ML/scaler/scaler_wave.py
+            parameters:
+              - "--ambiente"
+              - "project"
+          environment_key: Default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED
