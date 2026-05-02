@@ -37,5 +37,5 @@ features = ['wind_u', 'wind_v', 'wave_u', 'wave_v', 'wave_period_s']
 scaler = StandardScaler()
 X = scaler.fit_transform(data_sample[features])
 
-route = f'/Volumes/cor_{ambiente}/ml/models/scaler/scaler.pkl'
-joblib.dump(scaler, route)
+path = f'/Volumes/cor_{ambiente}/ml/models/scaler/scaler.pkl'
+joblib.dump(scaler, path)
