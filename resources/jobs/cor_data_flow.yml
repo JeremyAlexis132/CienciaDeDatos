@@ -1,0 +1,46 @@
+resources:
+  jobs:
+    cor_data_flow:
+      name: cor_data_flow
+      tasks:
+        - task_key: landing_to_bronze
+          spark_python_task:
+            python_file: ../../code/ELT/project/landing_to_bronze.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+        - task_key: bronze_to_silver
+          depends_on:
+            - task_key: landing_to_bronze
+          spark_python_task:
+            python_file: ../../code/ELT/project/bronze_to_silver.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+        - task_key: silver_to_wave_daily_summary
+          depends_on:
+            - task_key: bronze_to_silver
+          spark_python_task:
+            python_file: ../../code/ELT/project/silver_to_wave_daily_summary.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED
