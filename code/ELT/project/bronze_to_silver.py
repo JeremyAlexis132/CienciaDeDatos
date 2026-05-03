@@ -48,9 +48,6 @@ def transform_swell_data(df, num_cols):
         (F.col("flagg_passed_struct_check") == True) &
         (F.col("number_of_columns") == num_cols)
     ).select(
-        F.lower(
-            F.substring_index(F.substring_index(F.col("source_file"), "/", -1), ".", 1)
-        ).alias("coast_name"),
         F.coalesce(
             mapping_expr[
                 F.lower(
@@ -58,7 +55,7 @@ def transform_swell_data(df, num_cols):
                 )
             ], 
             F.lit("")
-        ).alias("coast_name_formated"),
+        ).alias("coast_name"),
         
         F.to_timestamp(F.concat(
             F.col("cols")[year_idx].cast("double").cast("int"), F.lit("-"),
