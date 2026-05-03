@@ -34,10 +34,7 @@ spark.sql(
                     capa Gold el registro original del cual se extrajo la información.',
             coast_name STRING
                 COMMENT 'Nombre de la costa a la que corresponden las métricas de olas. Esta información se extrae del nombre del archivo fuente, 
-                    El nombre tiene el formato original en minusculas y sin espacios',
-            coast_name_formated STRING
-                COMMENT 'Nombre de la costa a la que corresponden las métricas de olas. Esta información se extrae del nombre del archivo fuente, 
-                    El nombre tiene el formato para mostrarlo en dashboards',
+                    El nombre tiene el formato limpio con espacios y mayúsculas',
             datetime TIMESTAMP
                 COMMENT 'Fecha y hora de la medición',
             year INTEGER
