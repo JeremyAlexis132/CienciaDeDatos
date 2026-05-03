@@ -30,29 +30,44 @@ df_bronze_raw_swell_metrics_pre_transform = (
     )
 )
 
-df_bronze_raw_swell_metrics_transformed = (
-    df_bronze_raw_swell_metrics_pre_transform.filter(
+coast_mapping = {
+    "salinacruz": "Salina Cruz",
+    "matamoros": "Matamoros",
+    "vallarta": "Puerto Vallarta",
+    "colonet": "Punta Colonet",
+    "tuxpan": "Tuxpan",
+    "carmen": "Playa del Carmen",
+    "sabancuy": "Sabancuy"
+}
+mapping_expr = F.create_map([F.lit(x) for x in sum(coast_mapping.items(), ())])
+
+def transform_swell_data(df, num_cols):
+    year_idx = 11 if num_cols == 12 else 12
+    
+    return df.filter(
         (F.col("flagg_passed_struct_check") == True) &
-        (F.col("number_of_columns") == 12)
+        (F.col("number_of_columns") == num_cols)
     ).select(
         F.lower(
-            F.substring_index(
-                F.substring_index(
-                    F.col("source_file"), 
-                    "/", 
-                    -1
-                ), 
-                ".", 
-                1
-            )
+            F.substring_index(F.substring_index(F.col("source_file"), "/", -1), ".", 1)
         ).alias("coast_name"),
+        F.coalesce(
+            mapping_expr[
+                F.lower(
+                    F.substring_index(F.substring_index(F.col("source_file"), "/", -1), ".", 1)
+                )
+            ], 
+            F.lit("")
+        ).alias("coast_name_formated"),
+        
         F.to_timestamp(F.concat(
-            F.col("cols")[11].cast("double").cast("int"), F.lit("-"),
+            F.col("cols")[year_idx].cast("double").cast("int"), F.lit("-"),
             F.col("cols")[0].cast("double").cast("int"), F.lit("-"),
             F.col("cols")[1].cast("double").cast("int"), F.lit(" "),
             F.col("cols")[2].cast("double").cast("int")
         ), "yyyy-M-d H").alias("datetime"),
-        F.col("cols")[11].cast("double").cast("int").alias("year"),
+        
+        F.col("cols")[year_idx].cast("double").cast("int").alias("year"),
         F.round(F.col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
         F.round(F.col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
         F.round(F.col("cols")[5], 2).cast("float").alias("wave_height_m"),
@@ -63,40 +78,14 @@ df_bronze_raw_swell_metrics_transformed = (
         F.current_timestamp().alias("transformation_timestamp"),
         F.col("data")
     )
-).unionByName(
-    df_bronze_raw_swell_metrics_pre_transform.filter(
-        (F.col("flagg_passed_struct_check") == True) &
-        (F.col("number_of_columns") == 13)
-    ).select(
-        F.lower(
-            F.substring_index(
-                F.substring_index(
-                    F.col("source_file"), 
-                    "/", 
-                    -1
-                ), 
-                ".", 
-                1
-            )
-        ).alias("coast_name"),
-        F.to_timestamp(F.concat(
-            F.col("cols")[12].cast("double").cast("int"), F.lit("-"),
-            F.col("cols")[0].cast("double").cast("int"), F.lit("-"),
-            F.col("cols")[1].cast("double").cast("int"), F.lit(" "),
-            F.col("cols")[2].cast("double").cast("int")
-        ), "yyyy-M-d H").alias("datetime"),
-        F.col("cols")[12].cast("double").cast("int").alias("year"),
-        F.round(F.col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
-        F.round(F.col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
-        F.round(F.col("cols")[5], 2).cast("float").alias("wave_height_m"),
-        F.round(F.col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
-        F.round(F.col("cols")[7], 2).cast("float").alias("wave_period_s"),
-        F.col("ingestion_timestamp"),
-        F.col("source_file"),
-        F.current_timestamp().alias("transformation_timestamp"),
-        F.col("data")
+
+df_bronze_raw_swell_metrics_transformed = (
+    transform_swell_data(df_bronze_raw_swell_metrics_pre_transform, 12)
+    .unionByName(
+        transform_swell_data(df_bronze_raw_swell_metrics_pre_transform, 13)
     )
 )
+
 df_bronze_raw_swell_metrics_add_u_v = (
     df_bronze_raw_swell_metrics_transformed.withColumn(
         "wind_u", F.round(F.col("wind_speed_ms") * F.sin(F.radians(F.col("wind_direction_deg"))), 2).alias("wind_u")
