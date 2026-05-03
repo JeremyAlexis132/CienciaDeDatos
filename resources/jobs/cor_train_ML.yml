@@ -8,7 +8,7 @@ resources:
             python_file: ../../code/ML/scaler/scaler_wave.py
             parameters:
               - "--ambiente"
-              - "project"
+              - "${var.catalog_name}"
           environment_key: Default
       queue:
         enabled: true
