@@ -43,26 +43,34 @@ spark.sql(
                 COMMENT 'Velocidad del viento en metros por segundo',
             wind_direction_deg FLOAT
                 COMMENT 'Dirección del viento en grados',
-            wind_u FLOAT
-                COMMENT 'Componente u de la velocidad del viento, calculado a partir de la velocidad y dirección del viento',
-            wind_v FLOAT
-                COMMENT 'Componente v de la velocidad del viento, calculado a partir de la velocidad y dirección del viento',
+            wind_cos_direction FLOAT
+                COMMENT 'Coseno de la direccion del viento se usa para evitar problemas de linealidad en los modelos de ML',
+            wind_sin_direction FLOAT
+                COMMENT 'Seno de la direccion del viento se usa para evitar problemas de linealidad en los modelos de ML',
             wave_height_m FLOAT
                 COMMENT 'Altura de las olas en metros',
             wave_direction_deg FLOAT
                 COMMENT 'Dirección de las olas en grados',
-            wave_u FLOAT
-                COMMENT 'Componente u de la altura de las olas, calculado a partir de la altura y dirección de las olas',
-            wave_v FLOAT
-                COMMENT 'Componente v de la altura de las olas, calculado a partir de la altura y dirección de las olas',
+            wave_cos_direction FLOAT
+                COMMENT 'Coseno de la direccion de la ola se usa para evitar problemas de linealidad en los modelos de ML',
+            wave_sin_direction FLOAT
+                COMMENT 'Seno de la direccion de la ola se usa para evitar problemas de linealidad en los modelos de ML',
             wave_period_s FLOAT
                 COMMENT 'Periodo de las olas en segundos',
+            wave_energy FLOAT
+                COMMENT 'Energía de las olas, calculada como (1/8) * gravedad * altura^2',
+            wave_steepness FLOAT
+                COMMENT 'Factor para determinar la estabilidad de las olas.',
+            wave_classification STRING
+                COMMENT 'Clasificación del estado del mar para la medición, basada en las métricas de olas. Puede ser .',
             ingestion_timestamp TIMESTAMP
                 COMMENT 'Fecha y hora en que el registro fue ingresado a la tabla bronze.raw_swell_metrics',
             source_file STRING
                 COMMENT 'Ruta del archivo fuente del cual se extrajo el registro original en la tabla bronze.raw_swell_metrics',
             transformation_timestamp TIMESTAMP
-                COMMENT 'Fecha y hora en que el registro fue transformado y cargado en esta tabla silver.swell_metrics'
+                COMMENT 'Fecha y hora en que el registro fue transformado y cargado en esta tabla silver.swell_metrics',
+            classification_timestamp TIMESTAMP
+                COMMENT 'Fecha y hora en que se asignó la clasificación del estado del mar a este registro, basada en las métricas de olas'
         )
         USING DELTA
         PARTITIONED BY (coast_name, year)
@@ -134,6 +142,28 @@ spark.sql(
             y las métricas agregadas como la altura máxima, mínima y promedio de las olas, el periodo de la ola más alta y más baja, la dirección de la ola más alta, 
             y la velocidad del viento asociada a la ola más alta. Esta tabla se genera a partir de los datos transformados en la tabla silver.swell_metrics y se 
             utiliza para análisis y visualizaciones a nivel diario.'
+    """
+)
+
+spark.sql(
+    f"""
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.gold.wave_monthly_classification (
+            year INTEGER
+                COMMENT 'Año de la medición.',
+            month STRING
+                COMMENT 'Mes de la medición.',
+            coast_name STRING
+                COMMENT 'Nombre de la costa a la que corresponden las métricas de olas.',
+            wave_classification STRING
+                COMMENT 'Clasificación general del estado del mar para el mes y costa especificados, basada en las métricas de olas. 
+                    Puede ser "Calm", "Moderate" o "Rough" dependiendo de los valores agregados de altura, periodo y dirección de las olas.',
+            percentage FLOAT
+                COMMENT 'Porcentaje de días en el mes que corresponden a la clasificación general del estado del mar para la costa especificada.'
+        )
+        USING DELTA
+        COMMENT 'Tabla con la clasificación mensual del estado del mar para cada costa. Cada registro contiene el año, mes, nombre de la costa, 
+            la clasificación general del estado del mar basada en las métricas de olas, y el porcentaje de días en el mes que corresponden a esa clasificación. 
+            Esta tabla se genera agregando la columna clasificacion de la tabla silver.swell_metrics.'
     """
 )
 
