@@ -12,15 +12,28 @@ args = parser.parse_args()
 ambiente = args.ambiente
 print(ambiente)
 PORCENTAJE_ENTRENAMIENTO = 0.5
+FEATURES = [
+    'wind_speed_ms', 'wind_cos_direction', 'wind_sin_direction', 'wave_height_m', 
+    'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_steepness'
+]
+RANDOM_SEED = 0
 
 data = (
     spark.sql(
         f"""
-            SELECT coast_name, datetime, wind_u, wind_v, wave_u, wave_v, wave_period_s
+            SELECT coast_name, datetime, wind_speed_ms, wind_cos_direction, wind_sin_direction,
+                wave_height_m, wave_cos_direction, wave_sin_direction, wave_period_s, wave_energy,
+                wave_steepness
             FROM cor_{ambiente}.silver.swell_metrics
         """
     )
 )
+coast_names = (
+    spark.sql(f"""
+        SELECT DISTINCT coast_name
+        FROM cor_{ambiente}.silver.swell_metrics
+    """)
+).toPandas()['coast_name'].tolist()
 
 data_pre_processing = (
     data
@@ -31,13 +44,9 @@ coast_year_month_dict = {row.coast_year_month: PORCENTAJE_ENTRENAMIENTO for row 
 
 data_sample = (
     data_pre_processing
-    .sampleBy('coast_year_month', fractions=coast_year_month_dict, seed=0)
+    .sampleBy('coast_year_month', fractions=coast_year_month_dict, seed=RANDOM_SEED)
     .drop('coast_year_month')
 ).toPandas()
-
-coast_names = data_sample['coast_name'].unique()
-
-features = ['wind_u', 'wind_v', 'wave_u', 'wave_v', 'wave_period_s']
 
 scaler = StandardScaler()
 
@@ -48,6 +57,6 @@ else:
     scaler_path = f'{base_path}/scaler/scaler_{{}}.pkl'
 
 for coast in coast_names:
-    X = data_sample[data_sample['coast_name'] == coast][features]
+    X = data_sample[data_sample['coast_name'] == coast][FEATURES]
     scaler.fit(X)
     joblib.dump(scaler, scaler_path.format(coast))
