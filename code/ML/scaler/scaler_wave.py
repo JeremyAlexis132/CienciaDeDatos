@@ -9,14 +9,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--ambiente")
 args = parser.parse_args()
 
+# Parametros
+
 ambiente = args.ambiente
 print(ambiente)
-PORCENTAJE_ENTRENAMIENTO = 0.5
+PORCENTAJE_SAMPLE_DATA = 0.5
 FEATURES = [
     'wind_speed_ms', 'wind_cos_direction', 'wind_sin_direction', 'wave_height_m', 
     'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_steepness'
 ]
 RANDOM_SEED = 0
+
+if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
+    scaler_path = f'/Volumes/cor_{ambiente}/ml/models/scaler/scaler_{{}}.pkl'
+else:
+    scaler_path = f'{Path.cwd().parent}/scaler/scaler_{{}}.pkl'
 
 data = (
     spark.sql(
@@ -40,7 +47,7 @@ data_pre_processing = (
     .withColumn('coast_year_month', F.concat(F.col('coast_name'), F.lit('_'), F.date_format('datetime', 'yyyy-MM')))
 )
 
-coast_year_month_dict = {row.coast_year_month: PORCENTAJE_ENTRENAMIENTO for row in data_pre_processing.select('coast_year_month').distinct().collect()}
+coast_year_month_dict = {row.coast_year_month: PORCENTAJE_SAMPLE_DATA for row in data_pre_processing.select('coast_year_month').distinct().collect()}
 
 data_sample = (
     data_pre_processing
@@ -49,12 +56,6 @@ data_sample = (
 ).toPandas()
 
 scaler = StandardScaler()
-
-if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
-    scaler_path = f'/Volumes/cor_{ambiente}/ml/models/scaler/scaler_{{}}.pkl'
-else:
-    base_path = Path.cwd().parent
-    scaler_path = f'{base_path}/scaler/scaler_{{}}.pkl'
 
 for coast in coast_names:
     X = data_sample[data_sample['coast_name'] == coast][FEATURES]
