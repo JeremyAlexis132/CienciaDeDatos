@@ -5,15 +5,15 @@ from pathlib import Path
 from pyspark.sql import functions as F
 import argparse
 
+# Argumentos
 parser = argparse.ArgumentParser()
 parser.add_argument("--ambiente")
 args = parser.parse_args()
-
-# Parametros
-
 ambiente = args.ambiente
 print(ambiente)
-PORCENTAJE_SAMPLE_DATA = 0.5
+
+# Parametros
+PORCENTAJE_SAMPLE_DATA = 0.6
 FEATURES = [
     'wind_speed_ms', 'wind_cos_direction', 'wind_sin_direction', 'wave_height_m', 
     'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_steepness'
@@ -25,39 +25,37 @@ if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
 else:
     scaler_path = f'{Path.cwd().parent}/scaler/scaler_{{}}.pkl'
 
-data = (
+# Obtener costas
+coast_names = (
     spark.sql(
         f"""
-            SELECT coast_name, datetime, wind_speed_ms, wind_cos_direction, wind_sin_direction,
-                wave_height_m, wave_cos_direction, wave_sin_direction, wave_period_s, wave_energy,
-                wave_steepness
+            SELECT DISTINCT coast_name
             FROM cor_{ambiente}.silver.swell_metrics
         """
     )
-)
-coast_names = (
-    spark.sql(f"""
-        SELECT DISTINCT coast_name
-        FROM cor_{ambiente}.silver.swell_metrics
-    """)
 ).toPandas()['coast_name'].tolist()
 
-data_pre_processing = (
-    data
-    .withColumn('coast_year_month', F.concat(F.col('coast_name'), F.lit('_'), F.date_format('datetime', 'yyyy-MM')))
-)
-
-coast_year_month_dict = {row.coast_year_month: PORCENTAJE_SAMPLE_DATA for row in data_pre_processing.select('coast_year_month').distinct().collect()}
-
-data_sample = (
-    data_pre_processing
-    .sampleBy('coast_year_month', fractions=coast_year_month_dict, seed=RANDOM_SEED)
-    .drop('coast_year_month')
-).toPandas()
-
-scaler = StandardScaler()
-
 for coast in coast_names:
-    X = data_sample[data_sample['coast_name'] == coast][FEATURES]
+    data = (
+        spark.sql(
+            f"""
+                SELECT coast_name, datetime, {', '.join(FEATURES)},
+                CONCAT(coast_name, '_', DATE_FORMAT(datetime, 'yyyyMM')) AS coast_year_month
+                FROM cor_{ambiente}.silver.swell_metrics
+                WHERE coast_name = '{coast}'
+            """
+        )
+    )
+
+    coast_year_month_dict = {row.coast_year_month: PORCENTAJE_SAMPLE_DATA for row in data.select('coast_year_month').distinct().collect()}
+    data_sample = (
+        data
+        .sampleBy('coast_year_month', fractions=coast_year_month_dict, seed=RANDOM_SEED)
+        .drop('coast_year_month')
+    ).toPandas()
+
+    scaler = StandardScaler()
+    X = data_sample[FEATURES]
     scaler.fit(X)
+
     joblib.dump(scaler, scaler_path.format(coast))
