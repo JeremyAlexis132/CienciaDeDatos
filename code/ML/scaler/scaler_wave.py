@@ -2,7 +2,6 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 import os
 from pathlib import Path
-from pyspark.sql import functions as F
 import argparse
 
 # Argumentos
