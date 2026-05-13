@@ -12,7 +12,8 @@ ambiente = args.ambiente
 print(ambiente)
 
 # Parametros
-PORCENTAJE_SAMPLE_DATA = 0.6
+PORCENTAJE_SAMPLE_DATA = 1
+EVERY_N_YEARS = 2
 FEATURES = [
     'wind_speed_ms', 'wind_cos_direction', 'wind_sin_direction', 'wave_height_m', 
     'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_steepness'
@@ -42,6 +43,7 @@ for coast in coast_names:
                 CONCAT(coast_name, '_', DATE_FORMAT(datetime, 'yyyyMM')) AS coast_year_month
                 FROM cor_{ambiente}.silver.swell_metrics
                 WHERE coast_name = '{coast}'
+                AND YEAR(datetime) % {EVERY_N_YEARS} = 0
             """
         )
     )
