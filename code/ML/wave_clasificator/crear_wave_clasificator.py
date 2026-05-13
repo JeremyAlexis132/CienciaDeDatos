@@ -44,11 +44,11 @@ TARGET = "sea_state_level"
 
 if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
     scaler_path = f'/Volumes/cor_{ambiente}/ml/models/scaler/scaler_{{}}.pkl'
-    model_path = f'/Volumes/cor_{ambiente}/ml/models/wave_clasification/wave_clasification_{{}}.pkl'
+    model_path = f'/Volumes/cor_{ambiente}/ml/models/wave_clasificator/wave_clasificator_{{}}.pkl'
 else:
     base_path = Path.cwd().parent
     scaler_path = f'{base_path}/scaler/scaler_{{}}.pkl'
-    model_path = f'{base_path}/wave_clasification/wave_clasification_{{}}.pkl'
+    model_path = f'{base_path}/wave_clasificator/wave_clasificator_{{}}.pkl'
 
 # Obtener costas
 coast_names = (
