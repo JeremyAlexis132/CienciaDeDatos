@@ -3,14 +3,6 @@ from pathlib import Path
 import joblib
 import pandas as pd
 from sklearn.mixture import GaussianMixture
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    classification_report,
-    confusion_matrix,
-    accuracy_score,
-    balanced_accuracy_score
-)
 import argparse
 
 # Argumentos
@@ -21,8 +13,8 @@ ambiente = args.ambiente
 print(ambiente)
 
 # Parametros
-PORCENTAJE_SAMPLE_DATA = 1
-EVERY_N_YEARS = 3
+PORCENTAJE_SAMPLE_DATA = 0.8
+EVERY_N_YEARS = 4
 RANDOM_SEED = 0
 
 SCALER_FEATURES = [
@@ -30,17 +22,14 @@ SCALER_FEATURES = [
     'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_steepness'
 ]
 
-MODEL_FEATURES = ['wind_speed_ms', 'wave_height_m', 'wave_period_s', 'wave_steepness']
-SORT_FEATURES = ["wave_height_m", "wind_speed_ms", "wave_steepness"]
-EXTREME_FEATURES = ['wind_speed_ms', 'wave_height_m']
+GMM_FEATURES = [
+    'wind_speed_ms', 'wave_energy', 
+    'wave_period_s', 'wave_steepness'
+]
+EXTREME_FEATURES = ['wind_speed_ms', 'wave_energy', 'wave_period_s']
+SORT_FEATURES = ["wave_energy", "wave_period_s", "wind_speed_ms"]
 N_CLUSTERS = 6
-
-RANDOM_SEED_RANDOM_FOREST = 42
-TEST_SIZE = 0.2
-N_ESTIMATORS = 500
-MIN_SAMPLES_LEAF = 10
-N_JOBS = -1
-TARGET = "sea_state_level"
+EXTREME_THRESHOLD = 0.9
 
 if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
     scaler_path = f'/Volumes/cor_{ambiente}/ml/models/scaler/scaler_{{}}.pkl'
@@ -87,16 +76,15 @@ for coast in coast_names:
     scaled_data = scaler.transform(data_sample[SCALER_FEATURES])
     scaled_df = pd.DataFrame(scaled_data, columns=SCALER_FEATURES)
 
-    # Pre etiquetar con GMM (apredizaje no supervisado)
     gmm = GaussianMixture(
         n_components=N_CLUSTERS,
         covariance_type="full",
         random_state=RANDOM_SEED
     )
-    data_sample["cluster"] = gmm.fit_predict(scaled_df[MODEL_FEATURES])
+    data_sample["gmm_cluster"] = gmm.fit_predict(scaled_df[GMM_FEATURES])
     
     cluster_summary = (
-        data_sample.groupby("cluster")[MODEL_FEATURES]
+        data_sample.groupby("gmm_cluster")[GMM_FEATURES]
         .mean()
         .sort_values(SORT_FEATURES)
     )
@@ -104,52 +92,14 @@ for coast in coast_names:
         old_cluster: new_cluster + 1
         for new_cluster, old_cluster in enumerate(cluster_summary.index)
     }
-    data_sample["sea_state_level"] = data_sample["cluster"].map(cluster_order)
 
-    data_sample['mask_extremo'] = data_sample[EXTREME_FEATURES[0]] > data_sample[EXTREME_FEATURES[0]].quantile(0.99)
+    data_sample["gmm_sea_state_level"] = data_sample["gmm_cluster"].map(cluster_order)
+
+    data_sample['gmm_mask_extremo'] = data_sample[EXTREME_FEATURES[0]] > data_sample[EXTREME_FEATURES[0]].quantile(EXTREME_THRESHOLD)
     for feature in EXTREME_FEATURES[1:]:
-        data_sample['mask_extremo'] &= data_sample[feature] > data_sample[feature].quantile(0.99)
-    data_sample.loc[data_sample['mask_extremo'], 'sea_state_level'] = 7
+        data_sample['gmm_mask_extremo'] &= data_sample[feature] > data_sample[feature].quantile(EXTREME_THRESHOLD)
 
-    # Entrenar clasificador Random Forest (aprendizaje supervisado)
-    X = data_sample[MODEL_FEATURES]
-    y = data_sample[TARGET].astype(int)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=TEST_SIZE,
-        random_state=RANDOM_SEED_RANDOM_FOREST,
-        stratify=y
-    )
-
-    rf_classifier = RandomForestClassifier(
-        n_estimators=N_ESTIMATORS,
-        max_depth=None,
-        min_samples_leaf=MIN_SAMPLES_LEAF,
-        class_weight="balanced",
-        random_state=RANDOM_SEED_RANDOM_FOREST,
-        n_jobs=N_JOBS
-    )
-    rf_classifier.fit(X_train, y_train)
-
-    y_pred = rf_classifier.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
-    print("Accuracy:", accuracy)
-    print("Balanced accuracy:", balanced_accuracy)
-    print(
-        classification_report(
-            y_test,
-            y_pred,
-            digits=3
-        )
-    )
-    cm = confusion_matrix(y_test, y_pred)
-    print(cm)
-
-    if (accuracy < 0.85) or (balanced_accuracy < 0.85):
-        print(f'El modelo Random Forest para la costa {coast} no alcanzó el umbral de rendimiento.')
-        continue
+    data_sample.loc[data_sample['gmm_mask_extremo'], 'gmm_sea_state_level'] = 7
 
     model_path = model_path.format(coast)
-    joblib.dump(rf_classifier, model_path)
+    joblib.dump(gmm, model_path)

@@ -5,11 +5,21 @@ resources:
       tasks:
         - task_key: train_scaler_wave
           spark_python_task:
-            python_file: ../../code/ML/scaler/scaler_wave.py
+            python_file: ../../code/ML/scaler/crear_scaler_wave.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
           environment_key: Default
+        - task_key: train_wave_clasificator
+          depends_on:
+            - task_key: train_scaler_wave
+          spark_python_task:
+            python_file: ../../code/ML/wave_clasificator/crear_wave_clasificator.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          environment_key: Default
+
       queue:
         enabled: true
       environments:
