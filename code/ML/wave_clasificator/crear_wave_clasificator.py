@@ -13,8 +13,8 @@ ambiente = args.ambiente
 print(ambiente)
 
 # Parametros
-PORCENTAJE_SAMPLE_DATA = 0.8
-EVERY_N_YEARS = 4
+PORCENTAJE_SAMPLE_DATA = 0.7
+EVERY_N_YEARS = 2
 RANDOM_SEED = 0
 
 SCALER_FEATURES = [
@@ -63,6 +63,10 @@ for coast in coast_names:
             """
         )
     )
+
+    if data.count() == 0:
+        print(f'No hay datos para la costa {coast}, saltando...')
+        continue
 
     coast_year_month_dict = {row.coast_year_month: PORCENTAJE_SAMPLE_DATA for row in data.select('coast_year_month').distinct().collect()}
     data_sample = (

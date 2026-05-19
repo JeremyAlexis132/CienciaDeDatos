@@ -48,6 +48,10 @@ for coast in coast_names:
         )
     )
 
+    if data.count() == 0:
+        print(f'No hay datos para la costa {coast}, saltando...')
+        continue
+    
     coast_year_month_dict = {row.coast_year_month: PORCENTAJE_SAMPLE_DATA for row in data.select('coast_year_month').distinct().collect()}
     data_sample = (
         data
