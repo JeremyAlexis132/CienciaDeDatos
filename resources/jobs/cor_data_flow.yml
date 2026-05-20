@@ -25,6 +25,18 @@ resources:
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
+        - task_key: validar_existencia_modelos
+          depends_on:
+            - task_key: bronze_to_silver
+          spark_python_task:
+            python_file: ../../code/ELT/project/verify_models_available.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
         - task_key: silver_to_wave_daily_summary
           depends_on:
             - task_key: bronze_to_silver
