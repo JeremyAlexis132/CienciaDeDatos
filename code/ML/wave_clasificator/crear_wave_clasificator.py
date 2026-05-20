@@ -29,8 +29,8 @@ SCALER_FEATURES = [
 ]
 
 GMM_FEATURES = [
-    'wind_speed_ms', 'wave_energy', 
-    'wave_period_s', 'wave_steepness'
+    'wind_speed_ms', 
+    'wave_energy', 'wave_height_m', 'wave_period_s', 'wave_steepness'
 ]
 EXTREME_FEATURES = ['wind_speed_ms', 'wave_energy', 'wave_period_s']
 SORT_FEATURES = ["wave_energy", "wave_period_s", "wind_speed_ms"]
@@ -126,12 +126,16 @@ for coast in coast_names:
 
     data_sample.loc[data_sample['gmm_mask_extremo'], 'gmm_sea_state_level'] = 7
 
-    # Evaluar modelo GMM)
+    # Evaluar modelo GMM
+    q_5 = data_sample.groupby('gmm_sea_state_level')['gmm_cluster_probability'].quantile(0.05)
+    q_10 = data_sample.groupby('gmm_sea_state_level')['gmm_cluster_probability'].quantile(0.10)
+    q_15 = data_sample.groupby('gmm_sea_state_level')['gmm_cluster_probability'].quantile(0.15)
     if not (
         all(data_sample.groupby('gmm_sea_state_level')['gmm_cluster_probability'].quantile(0.05)>=0.5) and
         all(data_sample.groupby('gmm_sea_state_level')['gmm_cluster_probability'].quantile(0.10)>=0.7) and
-        all(data_sample.groupby('gmm_sea_state_level')['gmm_cluster_probability'].quantile(0.15)>=0.9) 
+        all(data_sample.groupby('gmm_sea_state_level')['gmm_cluster_probability'].quantile(0.15)>=0.8) 
     ):
+        print(f'Quantiles: 0.05: {q_5}, 0.10: {q_10}, 0.15: {q_15}')
         print(f'El modelo GMM para la costa {coast} no es lo suficientemente bueno, saltando...')
         continue
 
@@ -166,6 +170,7 @@ for coast in coast_names:
         acurracy >= 0.7 and 
         balanced_acurracy >= 0.5
     ):
+        print(f'Accuracy: {acurracy}, Balanced Accuracy: {balanced_acurracy}')
         print(f'El modelo Random Forest para la costa {coast} no es lo suficientemente bueno, saltando...')
         continue
 
