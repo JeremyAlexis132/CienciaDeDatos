@@ -173,5 +173,7 @@ for coast in coast_names:
         print(f'Accuracy: {acurracy}, Balanced Accuracy: {balanced_acurracy}')
         print(f'El modelo Random Forest para la costa {coast} no es lo suficientemente bueno, saltando...')
         continue
+    else:
+        print(f'Modelo para la costa {coast} cumple con los criterios')
 
     joblib.dump(rf_classifier, model_path.format(coast))
