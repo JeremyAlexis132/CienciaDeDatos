@@ -68,9 +68,7 @@ spark.sql(
             source_file STRING
                 COMMENT 'Ruta del archivo fuente del cual se extrajo el registro original en la tabla bronze.raw_swell_metrics',
             transformation_timestamp TIMESTAMP
-                COMMENT 'Fecha y hora en que el registro fue transformado y cargado en esta tabla silver.swell_metrics',
-            classification_timestamp TIMESTAMP
-                COMMENT 'Fecha y hora en que se asignó la clasificación del estado del mar a este registro, basada en las métricas de olas'
+                COMMENT 'Fecha y hora en que el registro fue transformado y cargado en esta tabla silver.swell_metrics'
         )
         USING DELTA
         PARTITIONED BY (coast_name, year)
@@ -103,6 +101,31 @@ spark.sql(
             Cada registro contiene los datos crudos originales, la ruta del archivo fuente, el motivo del error, las marcas de tiempo de ingesta y 
             transformación, y un indicador de si el problema ha sido resuelto. Esta tabla permite realizar un seguimiento de los registros problemáticos 
             y facilita su revisión y corrección para su posterior inclusión en la tabla silver.swell_metrics.'
+    """
+)
+
+spark.sql(
+    f"""
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.silver.swell_clasification (
+            id BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1)
+                COMMENT 'ID de registro único se utiliza para relacionar con la tabla silver.swell_metrics.',
+            coast_name STRING
+                COMMENT 'Nombre de la costa a la que corresponden las métricas de olas.',
+            datetime TIMESTAMP
+                COMMENT 'Fecha y hora de la medición',
+            year INTEGER
+                COMMENT 'Año de la medición, extraído de la fecha y hora',
+            wave_classification STRING
+                COMMENT 'Clasificación del estado del mar para la medición, basada en las métricas de olas. Puede ser "Mar calmado", "Mar suave", 
+                    "Mar dinámico", "Mar agitado", "Mar fuerte", "Mar peligroso" o "Mar extremo".',
+            classification_timestamp TIMESTAMP
+                COMMENT 'Fecha y hora en que se realizó la clasificación del estado del mar para esta medición.'
+        )
+        USING DELTA
+        PARTITIONED BY (coast_name, year)
+        COMMENT 'Tabla para almacenar la clasificación del estado del mar para cada medición de olas. 
+            Se partitiona por nombre de costa y año para mejorar el rendimiento de las consultas. Los registros en esta tabla se generan a partir de los valores
+            de swell_metrics, aplicando modelos de clasificacion'
     """
 )
 
