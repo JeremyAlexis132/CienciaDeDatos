@@ -107,7 +107,7 @@ spark.sql(
 spark.sql(
     f"""
         CREATE TABLE IF NOT EXISTS cor_{ambiente}.silver.swell_clasification (
-            id BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1)
+            id BIGINT 
                 COMMENT 'ID de registro único se utiliza para relacionar con la tabla silver.swell_metrics.',
             coast_name STRING
                 COMMENT 'Nombre de la costa a la que corresponden las métricas de olas.',
