@@ -113,10 +113,26 @@ df_silver_classified = (
                 F.col("wave_steepness")
             )
         )
+        .withColumn(
+            "classification_timestamp", 
+            F.current_timestamp()
+        )
+)
+
+df_silver_classified_clean = (
+    df_silver_classified
+    .select(
+        "id",
+        "coast_name",
+        "datetime",
+        "year",
+        "wave_classification",
+        "classification_timestamp"
+    )
 )
 
 query_silver_classified = (
-    df_silver_classified.writeStream
+    df_silver_classified_clean.writeStream
         .format("delta")
         .trigger(availableNow=True)
         .option(
