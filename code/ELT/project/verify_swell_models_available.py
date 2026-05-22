@@ -17,25 +17,32 @@ else:
     scaler_path = f'{base_path}/scaler/scaler_{{}}.pkl'
     model_path = f'{base_path}/wave_clasificator/wave_clasificator_{{}}.pkl'
 
-coast_names = (
-    spark.sql(
-        f"""
-            SELECT DISTINCT coast_name
-            FROM cor_{ambiente}.silver.swell_metrics
-        """
-    )
+coast_names = spark.sql(
+    f"""
+    SELECT DISTINCT coast_name
+    FROM cor_{ambiente}.silver.swell_metrics
+    """
 ).toPandas()['coast_name'].tolist()
 
 modelos_disponibles = []
+modelos_faltantes = ''
 for coast in coast_names:
     scaler_file = scaler_path.format(coast)
     model_file = model_path.format(coast)
     if os.path.exists(scaler_file) and os.path.exists(model_file):
-        modelos_disponibles.append(f'{coast}: si')
+        modelos_disponibles.append(True)
     else:
-        modelos_disponibles.append(f'{coast}: no')
+        modelos_faltantes += f"{coast},"
+        modelos_disponibles.append(False)
+
+modelos_faltantes = modelos_faltantes.rstrip(",")
 
 dbutils.jobs.taskValues.set(
     key="todos_los_modelos_existen",
     value=str(all(modelos_disponibles)).lower()
+)
+
+dbutils.jobs.taskValues.set(
+    key="modelos_faltantes",
+    value=str(modelos_faltantes)
 )

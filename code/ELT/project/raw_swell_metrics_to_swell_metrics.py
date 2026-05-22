@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from pyspark.sql import functions as F
 import argparse
 
@@ -7,6 +9,13 @@ args = parser.parse_args()
 
 ambiente = args.ambiente
 print(ambiente)
+
+if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
+    model_path = f'/Volumes/cor_{ambiente}/ml/models/wave_clasificator/wave_clasificator_{{}}.pkl'
+else:
+    base_path = Path.cwd().parent
+    model_path = f'{base_path}/wave_clasificator/wave_clasificator_{{}}.pkl'
+
 
 df_bronze_raw_swell_metrics = (
     spark.readStream
@@ -67,13 +76,13 @@ def transform_swell_data(df, num_cols):
 
         F.round(F.col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
         F.round(F.col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
-        F.round(F.cos(F.radians(F.col("cols")[4])), 4).alias("wind_cos_direction"),
-        F.round(F.sin(F.radians(F.col("cols")[4])), 4).alias("wind_sin_direction"),
+        F.round(F.cos(F.radians(F.col("cols")[4])), 4).cast("float").alias("wind_cos_direction"),
+        F.round(F.sin(F.radians(F.col("cols")[4])), 4).cast("float").alias("wind_sin_direction"),
 
         F.round(F.col("cols")[5], 2).cast("float").alias("wave_height_m"),
         F.round(F.col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
-        F.round(F.cos(F.radians(F.col("cols")[6])), 4).alias("wave_cos_direction"),
-        F.round(F.sin(F.radians(F.col("cols")[6])), 4).alias("wave_sin_direction"),
+        F.round(F.cos(F.radians(F.col("cols")[6])), 4).cast("float").alias("wave_cos_direction"),
+        F.round(F.sin(F.radians(F.col("cols")[6])), 4).cast("float").alias("wave_sin_direction"),
         F.round(F.col("cols")[7], 2).cast("float").alias("wave_period_s"),
         F.round((1/8) * (9.81 * 1026) * F.pow(F.col("cols")[5], 2), 2).cast("float").alias("wave_energy"),
         F.round(F.col("cols")[5] / F.pow(F.col("cols")[7], 2), 4).cast("float").alias("wave_steepness"),
@@ -99,19 +108,19 @@ df_bronze_raw_swell_metrics_quality = (
         (F.col("datetime") < "2019-01-01")
     ).withColumn(
         "flagg_passed_wind_speed_ms_checks",
-        (F.col("wind_speed_ms").between(0, 25))
+        (F.col("wind_speed_ms").between(0, 100))
     ).withColumn(
         "flagg_passed_wind_direction_deg_checks",
         (F.col("wind_direction_deg").between(0, 360))
     ).withColumn(
         "flagg_passed_wave_height_m_checks",
-        (F.col("wave_height_m").between(0, 7))
+        (F.col("wave_height_m").between(0, 50))
     ).withColumn(
         "flagg_passed_wave_direction_deg_checks",
         (F.col("wave_direction_deg").between(0, 360))
     ).withColumn(
         "flagg_passed_wave_period_s_checks",
-        (F.col("wave_period_s").between(0, 15))
+        (F.col("wave_period_s").between(0, 50))
     ).withColumn(
         "flagg_passed_quality_checks",
         (F.col("flagg_passed_datetime_check")) &
