@@ -78,6 +78,18 @@ resources:
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
+        - task_key: silver_to_wave_monthly_classification
+          depends_on:
+            - task_key: clasify_swell_metrics
+          spark_python_task:
+            python_file: ../../code/ELT/project/swell_clasification_wave_monthly_classification.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
       queue:
         enabled: true
       environments:
