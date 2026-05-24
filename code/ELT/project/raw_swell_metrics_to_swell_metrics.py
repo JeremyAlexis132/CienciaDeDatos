@@ -10,13 +10,6 @@ args = parser.parse_args()
 ambiente = args.ambiente
 print(ambiente)
 
-if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
-    model_path = f'/Volumes/cor_{ambiente}/ml/models/wave_clasificator/wave_clasificator_{{}}.pkl'
-else:
-    base_path = Path.cwd().parent
-    model_path = f'{base_path}/wave_clasificator/wave_clasificator_{{}}.pkl'
-
-
 df_bronze_raw_swell_metrics = (
     spark.readStream
         .format("delta")
