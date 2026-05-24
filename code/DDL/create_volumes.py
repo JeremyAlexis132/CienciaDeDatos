@@ -7,6 +7,7 @@ args = parser.parse_args()
 
 ambiente = args.ambiente
 print(ambiente)
+dbutils = DBUtils(spark)
 
 spark.sql(
     f"""
@@ -14,7 +15,6 @@ spark.sql(
     """
 )
 volume_path = f"/Volumes/cor_{ambiente}/bronze/data/landing"
-dbutils = DBUtils(spark)
 dbutils.fs.mkdirs(volume_path)
 
 spark.sql(
@@ -28,3 +28,14 @@ spark.sql(
         CREATE VOLUME IF NOT EXISTS cor_{ambiente}.gold.data
     """
 )
+
+spark.sql(
+    f"""
+        CREATE VOLUME IF NOT EXISTS cor_{ambiente}.ML.models
+    """
+)
+
+volume_path = f"/Volumes/cor_{ambiente}/ML/Models/wave_clasificator"
+dbutils.fs.mkdirs(volume_path)
+volume_path = f"/Volumes/cor_{ambiente}/ML/Models/scaler"
+dbutils.fs.mkdirs(volume_path)

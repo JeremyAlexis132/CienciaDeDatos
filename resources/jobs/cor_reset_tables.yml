@@ -1,26 +1,24 @@
 resources:
   jobs:
-    cor_data_flow_project:
-      name: cor_data_flow_project
+    cor_reset_tables:
+      name: cor_reset_tables
       tasks:
-        - task_key: landing_to_bronze
+        - task_key: drop_tables
           spark_python_task:
-            python_file: ../../code/ELT/project/landing_to_bronze.py
+            python_file: ../../code/DDL/drop_tables.py
             parameters:
               - "--ambiente"
-              - "project"
+              - "${var.catalog_name}"
           email_notifications:
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
-        - task_key: bronze_to_silver
-          depends_on:
-            - task_key: landing_to_bronze
+        - task_key: drop_checkpoints
           spark_python_task:
-            python_file: ../../code/ELT/project/bronze_to_silver.py
+            python_file: ../../code/DDL/drop_checkpoints.py
             parameters:
               - "--ambiente"
-              - "project"
+              - "${var.catalog_name}"
           email_notifications:
             on_failure:
               - guillermo.hre@gmail.com
