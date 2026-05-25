@@ -13,7 +13,7 @@ file = (
         .format("cloudFiles")
         .option("cloudFiles.format", "text")
         .option("cloudFiles.useIncrementalListing", "true")
-        .load(f"/Volumes/cor_{ambiente}/bronze/data/landing/")
+        .load(f"/Volumes/cor_{ambiente}/bronze/data/landing/swell")
 )
 
 df_bronze_raw_swell_metrics = file.select(

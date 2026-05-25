@@ -96,9 +96,7 @@ df_bronze_raw_swell_metrics_transformed = (
 df_bronze_raw_swell_metrics_quality = (
     df_bronze_raw_swell_metrics_transformed.withColumn(
         "flagg_passed_datetime_check",
-        (F.col("datetime").isNotNull()) &
-        (F.col("datetime") >= "1979-01-01") &
-        (F.col("datetime") < "2019-01-01")
+        (F.col("datetime").isNotNull())
     ).withColumn(
         "flagg_passed_wind_speed_ms_checks",
         (F.col("wind_speed_ms").between(0, 100))
