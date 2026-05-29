@@ -59,10 +59,8 @@ spark.sql(
                 COMMENT 'Periodo de las olas en segundos',
             wave_energy FLOAT
                 COMMENT 'Energía de las olas, calculada como (1/8) * gravedad * altura^2',
-            wave_steepness FLOAT
-                COMMENT 'Factor para determinar la estabilidad de las olas.',
-            wave_classification STRING
-                COMMENT 'Clasificación del estado del mar para la medición, basada en las métricas de olas. Puede ser .',
+            wave_power_kW_m FLOAT
+                COMMENT 'Potencia de las olas en kilovatios por metro, calculada como (490 * altura^2 * periodo) / 1000',
             ingestion_timestamp TIMESTAMP
                 COMMENT 'Fecha y hora en que el registro fue ingresado a la tabla bronze.raw_swell_metrics',
             source_file STRING
