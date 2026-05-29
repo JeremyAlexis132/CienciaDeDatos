@@ -21,10 +21,8 @@ else:
     model_path = f'{base_path}/wave_clasificator/wave_clasificator_{{}}.pkl'
 
 MODEL_FEATURES = [
-    "wind_speed_ms",
-    "wave_energy",
-    "wave_period_s",
-    "wave_steepness"
+    'wind_speed_ms', 
+    'wave_energy', 'wave_height_m', 'wave_period_s', 'wave_power_kW_m'
 ]
 
 sea_state_names = {
@@ -51,7 +49,7 @@ def predict_wave_classification(
     wind_speed_ms: pd.Series,
     wave_energy: pd.Series,
     wave_period_s: pd.Series,
-    wave_steepness: pd.Series
+    wave_power_kW_m: pd.Series
 ) -> pd.Series:
     result = pd.Series(
         ["Categoría desconocida"] * len(coast_name),
@@ -63,7 +61,7 @@ def predict_wave_classification(
         "wind_speed_ms": wind_speed_ms,
         "wave_energy": wave_energy,
         "wave_period_s": wave_period_s,
-        "wave_steepness": wave_steepness
+        "wave_power_kW_m": wave_power_kW_m
     })
 
     for coast in pdf["coast_name"].dropna().unique():
@@ -110,7 +108,7 @@ df_silver_classified = (
                 F.col("wind_speed_ms"),
                 F.col("wave_energy"),
                 F.col("wave_period_s"),
-                F.col("wave_steepness")
+                F.col("wave_power_kW_m")
             )
         )
         .withColumn(
