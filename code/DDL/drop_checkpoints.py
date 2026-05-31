@@ -27,7 +27,7 @@ try:
 except Exception as e:
     print(f"Error occurred while removing checkpoint directory: {e}")
 
-volume_path = f"/Volumes/cor_{ambiente}/silver/data/checkpoints/swell_clasification/"
+volume_path = f"/Volumes/cor_{ambiente}/silver/data/checkpoints/swell_classification/"
 try:
     dbutils.fs.rm(volume_path, recurse=True)
 except Exception as e:
