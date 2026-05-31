@@ -33,7 +33,7 @@ if 'DATABRICKS_RUNTIME_VERSION' in os.environ:
     model_path = f'/Volumes/cor_{ambiente}/ml/models/wave_classifier/wave_classifier.pkl'
 else:
     base_path = Path.cwd().parent
-    model_path = f'{base_path}/wave_classifier/wave_classifier{{}}.pkl'
+    model_path = f'{base_path}/wave_classifier/wave_classifier.pkl'
 
 _models_cache = None
 
