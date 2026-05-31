@@ -59,10 +59,8 @@ spark.sql(
                 COMMENT 'Periodo de las olas en segundos',
             wave_energy FLOAT
                 COMMENT 'Energía de las olas, calculada como (1/8) * gravedad * altura^2',
-            wave_steepness FLOAT
-                COMMENT 'Factor para determinar la estabilidad de las olas.',
-            wave_classification STRING
-                COMMENT 'Clasificación del estado del mar para la medición, basada en las métricas de olas. Puede ser .',
+            wave_power_kW_m FLOAT
+                COMMENT 'Potencia de las olas en kilovatios por metro, calculada como (490 * altura^2 * periodo) / 1000',
             ingestion_timestamp TIMESTAMP
                 COMMENT 'Fecha y hora en que el registro fue ingresado a la tabla bronze.raw_swell_metrics',
             source_file STRING
@@ -187,6 +185,34 @@ spark.sql(
         COMMENT 'Tabla con la clasificación mensual del estado del mar para cada costa. Cada registro contiene el año, mes, nombre de la costa, 
             la clasificación general del estado del mar basada en las métricas de olas, y el porcentaje de días en el mes que corresponden a esa clasificación. 
             Esta tabla se genera agregando la columna clasificacion de la tabla silver.swell_metrics.'
+    """
+)
+
+spark.sql(
+    f"""
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.gold.significant_wave_height_forecast (
+            coast_name STRING
+                COMMENT 'Nombre de la costa a la que corresponden las métricas de olas.',
+            H_50_lower FLOAT
+                COMMENT 'Valor inferior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 50 años, en metros.',
+            H_50_mean FLOAT
+                COMMENT 'Valor medio del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 50 años, en metros.',
+            H_50_upper FLOAT
+                COMMENT 'Valor superior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 50 años, en metros.',
+            H_100_lower FLOAT
+                COMMENT 'Valor inferior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 100 años, en metros.',
+            H_100_mean FLOAT
+                COMMENT 'Valor medio del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 100 años, en metros.',
+            H_100_upper FLOAT
+                COMMENT 'Valor superior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 100 años, en metros.',
+            prediction_timestamp TIMESTAMP
+                COMMENT 'Fecha y hora en que se realizó la predicción de la altura significativa de las olas para esta costa.'
+        )
+        USING DELTA
+        COMMENT 'Tabla con la predicción de la altura significativa de las olas para cada costa, basada en modelos de predicción. Cada registro contiene el nombre de la costa, 
+            los valores inferior, medio y superior del intervalo de confianza al 95% para la predicción de la altura significativa de las olas en periodos de retorno de 50 y 100
+            años. Esta tabla se genera a partir de los datos transformados en la tabla silver.swell_metrics y se utiliza para análisis y visualizaciones relacionadas con la predicción
+            de las olas.'
     """
 )
 

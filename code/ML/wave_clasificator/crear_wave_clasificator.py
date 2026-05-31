@@ -25,12 +25,12 @@ RANDOM_SEED = 0
 
 SCALER_FEATURES = [
     'wind_speed_ms', 'wind_cos_direction', 'wind_sin_direction', 'wave_height_m', 
-    'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_steepness'
+    'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_power_kW_m'
 ]
 
 GMM_FEATURES = [
     'wind_speed_ms', 
-    'wave_energy', 'wave_height_m', 'wave_period_s', 'wave_steepness'
+    'wave_energy', 'wave_height_m', 'wave_period_s', 'wave_power_kW_m'
 ]
 EXTREME_FEATURES = ['wind_speed_ms', 'wave_energy', 'wave_period_s']
 SORT_FEATURES = ["wave_energy", "wave_period_s", "wind_speed_ms"]
@@ -38,8 +38,8 @@ N_CLUSTERS = 6
 EXTREME_THRESHOLD = 0.9
 
 RF_FEATURES = [
-    'wind_speed_ms', 'wave_energy', 
-    'wave_period_s', 'wave_steepness'
+    'wind_speed_ms', 
+    'wave_energy', 'wave_height_m', 'wave_period_s', 'wave_power_kW_m'
 ]
 TARGET = "gmm_sea_state_level"
 TEST_SIZE = 0.25

@@ -23,6 +23,16 @@ resources:
             on_failure:
               - guillermo.hre@gmail.com
           environment_key: Default
+        - task_key: drop_models
+          spark_python_task:
+            python_file: ../../code/DDL/drop_models.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
       queue:
         enabled: true
       environments:

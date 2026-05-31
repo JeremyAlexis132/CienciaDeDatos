@@ -16,7 +16,7 @@ PORCENTAJE_SAMPLE_DATA = 1
 EVERY_N_YEARS = 2
 FEATURES = [
     'wind_speed_ms', 'wind_cos_direction', 'wind_sin_direction', 'wave_height_m', 
-    'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_steepness'
+    'wave_cos_direction', 'wave_sin_direction', 'wave_period_s', 'wave_energy', 'wave_power_kW_m'
 ]
 RANDOM_SEED = 0
 
