@@ -94,7 +94,12 @@ df_bronze_raw_swell_metrics_transformed = (
 )
 
 df_bronze_raw_swell_metrics_quality = (
-    df_bronze_raw_swell_metrics_transformed.withColumn(
+    df_bronze_raw_swell_metrics_transformed
+    .withColumn(
+        "flagg_passed_coast_name_check",
+        F.col("coast_name") != ""
+    )
+    .withColumn(
         "flagg_passed_datetime_check",
         (F.col("datetime").isNotNull())
     ).withColumn(
@@ -114,6 +119,7 @@ df_bronze_raw_swell_metrics_quality = (
         (F.col("wave_period_s").between(0, 50))
     ).withColumn(
         "flagg_passed_quality_checks",
+        (F.col("flagg_passed_coast_name_check")) &
         (F.col("flagg_passed_datetime_check")) &
         (F.col("flagg_passed_wind_speed_ms_checks")) &
         (F.col("flagg_passed_wind_direction_deg_checks")) &
@@ -125,7 +131,7 @@ df_bronze_raw_swell_metrics_quality = (
 
 df_silver_swell_metrics = df_bronze_raw_swell_metrics_quality.filter(F.col("flagg_passed_quality_checks") == True) \
     .drop(
-        "data", "flagg_passed_datetime_check", "flagg_passed_wind_speed_ms_checks",
+        "data", "flagg_passed_coast_name_check", "flagg_passed_datetime_check", "flagg_passed_wind_speed_ms_checks",
         "flagg_passed_wind_direction_deg_checks", "flagg_passed_wave_height_m_checks", "flagg_passed_wave_direction_deg_checks",
         "flagg_passed_wave_period_s_checks", "flagg_passed_quality_checks"
     )
@@ -149,6 +155,10 @@ df_quarantine_swell_metrics = (
             F.col("data"),
             F.col("source_file"),
             F.concat(
+                F.when(
+                    ~F.col("flagg_passed_coast_name_check"),
+                    F.lit("Nombre costa no identificado; ")
+                ).otherwise(F.lit("")),
                 F.when(
                     ~F.col("flagg_passed_datetime_check"), 
                     F.lit("Fecha invalida; ")

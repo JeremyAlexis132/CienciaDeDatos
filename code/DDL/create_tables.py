@@ -104,7 +104,7 @@ spark.sql(
 
 spark.sql(
     f"""
-        CREATE TABLE IF NOT EXISTS cor_{ambiente}.silver.swell_clasification (
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.silver.swell_classification (
             id BIGINT 
                 COMMENT 'ID de registro único se utiliza para relacionar con la tabla silver.swell_metrics.',
             coast_name STRING
@@ -215,5 +215,3 @@ spark.sql(
             de las olas.'
     """
 )
-
-# Tablas de la capa ML

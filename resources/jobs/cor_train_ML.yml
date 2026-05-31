@@ -1,20 +1,11 @@
 resources:
   jobs:
-    cor_train_ML:
-      name: cor_train_ML
+    cor_train_ml:
+      name: cor_train_ml
       tasks:
-        - task_key: train_scaler_wave
+        - task_key: wave_classifier
           spark_python_task:
-            python_file: ../../code/ML/scaler/crear_scaler_wave.py
-            parameters:
-              - "--ambiente"
-              - "${var.catalog_name}"
-          environment_key: Default
-        - task_key: train_wave_clasificator
-          depends_on:
-            - task_key: train_scaler_wave
-          spark_python_task:
-            python_file: ../../code/ML/wave_clasificator/crear_wave_clasificator.py
+            python_file: ../../code/ML/wave_classifier/crear_wave_classifier.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"

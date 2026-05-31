@@ -33,11 +33,9 @@ spark.sql(
 
 spark.sql(
     f"""
-        CREATE VOLUME IF NOT EXISTS cor_{ambiente}.ML.models
+        CREATE VOLUME IF NOT EXISTS cor_{ambiente}.ml.models
     """
 )
 
-volume_path = f"/Volumes/cor_{ambiente}/ML/Models/wave_clasificator"
-dbutils.fs.mkdirs(volume_path)
-volume_path = f"/Volumes/cor_{ambiente}/ML/Models/scaler"
+volume_path = f"/Volumes/cor_{ambiente}/ml/models/wave_classifier"
 dbutils.fs.mkdirs(volume_path)

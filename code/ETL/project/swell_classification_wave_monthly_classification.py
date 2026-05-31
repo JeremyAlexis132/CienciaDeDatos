@@ -26,7 +26,7 @@ spark.sql(
             date_format(datetime, 'MM') AS month,
             coast_name,
             wave_classification
-        FROM cor_{ambiente}.silver.swell_clasification
+        FROM cor_{ambiente}.silver.swell_classification
     ),
 
     months AS (
