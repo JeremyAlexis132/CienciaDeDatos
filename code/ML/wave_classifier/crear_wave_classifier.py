@@ -8,7 +8,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
-    balanced_accuracy_score
+    balanced_accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+    confusion_matrix
 )
 import argparse
 
@@ -30,7 +35,7 @@ N_CLUSTERS = 6
 EXTREME_FEATURES = ['wave_energy', 'wave_power_kW_m']
 MODEL_FEATURES = [
     'wind_speed_ms', 
-    'wave_energy', 'wave_height_m', 'wave_period_s', 'wave_power_kW_m'
+    'wave_height_m', 'wave_period_s', 'wave_energy', 'wave_power_kW_m'
 ]
 SCALED_MODEL_FEATURES = [f'{feature}_scaled' for feature in MODEL_FEATURES]
 
@@ -161,19 +166,80 @@ def entrenar_rf(df_train, df_test):
 
     y_pred = rf_classifier.predict(X_test)
 
-    acurracy = accuracy_score(y_test, y_pred)
-    balanced_acurracy = balanced_accuracy_score(y_test, y_pred)
-    
-    if not(
-        acurracy >= 0.7 and 
-        balanced_acurracy >= 0.5
-    ):
+    labels = sorted(y_test.unique())
+
+    accuracy = accuracy_score(y_test, y_pred)
+    balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
+
+    precision_macro = precision_score(y_test, y_pred, average="macro", zero_division=0)
+    recall_macro = recall_score(y_test, y_pred, average="macro", zero_division=0)
+    f1_macro = f1_score(y_test, y_pred, average="macro", zero_division=0)
+
+    precision_weighted = precision_score(y_test, y_pred, average="weighted", zero_division=0)
+    recall_weighted = recall_score(y_test, y_pred, average="weighted", zero_division=0)
+    f1_weighted = f1_score(y_test, y_pred, average="weighted", zero_division=0)
+
+    recall_por_clase = recall_score(
+        y_test,
+        y_pred,
+        labels=labels,
+        average=None,
+        zero_division=0
+    )
+    min_recall_por_clase = recall_por_clase.min()
+
+    print("\nDistribución real de clases en test:")
+    print(y_test.value_counts(normalize=True).sort_index())
+
+    print("\nDistribución predicha de clases en test:")
+    print(pd.Series(y_pred).value_counts(normalize=True).sort_index())
+
+    print("\nMétricas generales Random Forest:")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Balanced Accuracy: {balanced_accuracy:.4f}")
+    print(f"Precision Macro: {precision_macro:.4f}")
+    print(f"Recall Macro: {recall_macro:.4f}")
+    print(f"F1 Macro: {f1_macro:.4f}")
+    print(f"Precision Weighted: {precision_weighted:.4f}")
+    print(f"Recall Weighted: {recall_weighted:.4f}")
+    print(f"F1 Weighted: {f1_weighted:.4f}")
+    print(f"Mínimo recall por clase: {min_recall_por_clase:.4f}")
+
+    print("\nReporte por clase:")
+    print(
+        classification_report(
+            y_test,
+            y_pred,
+            labels=labels,
+            zero_division=0
+        )
+    )
+
+    print("\nMatriz de confusión:")
+    matriz_confusion = pd.DataFrame(
+        confusion_matrix(y_test, y_pred, labels=labels),
+        index=[f"real_{label}" for label in labels],
+        columns=[f"pred_{label}" for label in labels]
+    )
+    print(matriz_confusion)
+
+    cumple_criterios = (
+        accuracy >= 0.85 and
+        balanced_accuracy >= 0.85 and
+        f1_macro >= 0.85 and
+        min_recall_por_clase >= 0.85
+    )
+
+    if not cumple_criterios:
         print(f'El modelo Random Forest no cumple con los criterios')
+        print("Criterios mínimos:")
+        print(f"Accuracy >= 0.85")
+        print(f"Balanced Accuracy >= 0.85")
+        print(f"F1 Macro >= 0.85")
+        print(f"Recall mínimo por clase >= 0.85")
         return None
     else:
         print(f'El modelo Random Forest cumple con los criterios')
-    
-    print(f'Accuracy: {acurracy}, Balanced Accuracy: {balanced_acurracy}')
 
     return rf_classifier
 
