@@ -16,7 +16,7 @@ print(f"Ambiente: {ambiente}")
 
 MODEL_FEATURES = [
     'wind_speed_ms', 
-    'wave_energy', 'wave_height_m', 'wave_period_s', 'wave_power_kW_m'
+    'wave_energy', 'wave_height_m', 'wave_period_s'
 ]
 
 sea_state_names = {

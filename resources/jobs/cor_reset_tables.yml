@@ -1,7 +1,7 @@
 resources:
   jobs:
     cor_reset_tables:
-      name: cor_reset_tables
+      name: cor_reset_tables_and_models
       tasks:
         - task_key: drop_tables
           spark_python_task:

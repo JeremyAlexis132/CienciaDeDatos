@@ -16,8 +16,6 @@ spark.sql(
 )
 volume_path = f"/Volumes/cor_{ambiente}/bronze/data/landing/swell"
 dbutils.fs.mkdirs(volume_path)
-volume_path = f"/Volumes/cor_{ambiente}/bronze/data/landing/climate"
-dbutils.fs.mkdirs(volume_path)
 
 spark.sql(
     f"""
