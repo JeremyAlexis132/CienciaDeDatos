@@ -5,7 +5,7 @@ resources:
       tasks:
         - task_key: landing_to_bronze
           spark_python_task:
-            python_file: ../../code/ELT/project/landing_to_raw_swell_metrics.py
+            python_file: ../../code/ETL/project/landing_to_raw_swell_metrics.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
@@ -18,7 +18,7 @@ resources:
             - task_key: landing_to_bronze
           run_if: AT_LEAST_ONE_SUCCESS
           spark_python_task:
-            python_file: ../../code/ELT/project/raw_swell_metrics_to_swell_metrics.py
+            python_file: ../../code/ETL/project/raw_swell_metrics_to_swell_metrics.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
@@ -30,7 +30,7 @@ resources:
           depends_on:
             - task_key: bronze_to_silver
           spark_python_task:
-            python_file: ../../code/ELT/project/verify_swell_models_available.py
+            python_file: ../../code/ETL/project/verify_swell_models_available.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
@@ -50,15 +50,15 @@ resources:
             - task_key: if_todos_los_modelos_existen
               outcome: "false"
           run_job_task:
-            job_id: 1074605316974524
-        - task_key: clasify_swell_metrics
+            job_id: 1087152440923159
+        - task_key: classify_swell_metrics
           depends_on:
             - task_key: if_todos_los_modelos_existen
               outcome: "true"
             - task_key: crear_modelos
           run_if: AT_LEAST_ONE_SUCCESS
           spark_python_task:
-            python_file: ../../code/ELT/project/swell_metrics_to_swell_clasification.py
+            python_file: ../../code/ETL/project/swell_metrics_to_swell_classification.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
@@ -70,7 +70,7 @@ resources:
           depends_on:
             - task_key: bronze_to_silver
           spark_python_task:
-            python_file: ../../code/ELT/project/swell_metrics_to_wave_daily_summary.py
+            python_file: ../../code/ETL/project/swell_metrics_to_wave_daily_summary.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"
@@ -80,9 +80,9 @@ resources:
           environment_key: Default
         - task_key: silver_to_wave_monthly_classification
           depends_on:
-            - task_key: clasify_swell_metrics
+            - task_key: classify_swell_metrics
           spark_python_task:
-            python_file: ../../code/ELT/project/swell_clasification_wave_monthly_classification.py
+            python_file: ../../code/ETL/project/swell_classification_wave_monthly_classification.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"

@@ -14,6 +14,7 @@ df_silver_swell_metrics = spark.sql(
         FROM cor_{ambiente}.silver.swell_metrics s_m
         LEFT JOIN cor_{ambiente}.gold.wave_daily_summary d_s
             ON DATE(s_m.datetime) = d_s.date
+            AND s_m.coast_name = d_s.coast_name
         WHERE d_s.date IS NULL;
     """
 )

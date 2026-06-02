@@ -1,7 +1,7 @@
 resources:
   jobs:
     cor_reset_tables:
-      name: cor_reset_tables
+      name: cor_reset_tables_and_models
       tasks:
         - task_key: drop_tables
           spark_python_task:
@@ -14,8 +14,22 @@ resources:
               - guillermo.hre@gmail.com
           environment_key: Default
         - task_key: drop_checkpoints
+          depends_on:
+            - task_key: drop_tables
           spark_python_task:
             python_file: ../../code/DDL/drop_checkpoints.py
+            parameters:
+              - "--ambiente"
+              - "${var.catalog_name}"
+          email_notifications:
+            on_failure:
+              - guillermo.hre@gmail.com
+          environment_key: Default
+        - task_key: drop_models
+          depends_on:
+            - task_key: drop_checkpoints
+          spark_python_task:
+            python_file: ../../code/DDL/drop_models.py
             parameters:
               - "--ambiente"
               - "${var.catalog_name}"

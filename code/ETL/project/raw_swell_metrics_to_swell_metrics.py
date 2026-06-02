@@ -67,18 +67,18 @@ def transform_swell_data(df, num_cols):
         ), "yyyy-M-d H").alias("datetime"),
         F.col("cols")[year_idx].cast("double").cast("int").alias("year"),
 
-        F.round(F.col("cols")[3], 2).cast("float").alias("wind_speed_ms"),
-        F.round(F.col("cols")[4], 2).cast("float").alias("wind_direction_deg"),
+        F.round(F.col("cols")[3], 4).cast("float").alias("wind_speed_ms"),
+        F.round(F.col("cols")[4], 4).cast("float").alias("wind_direction_deg"),
         F.round(F.cos(F.radians(F.col("cols")[4])), 4).cast("float").alias("wind_cos_direction"),
         F.round(F.sin(F.radians(F.col("cols")[4])), 4).cast("float").alias("wind_sin_direction"),
 
-        F.round(F.col("cols")[5], 2).cast("float").alias("wave_height_m"),
-        F.round(F.col("cols")[6], 2).cast("float").alias("wave_direction_deg"),
+        F.round(F.col("cols")[5], 4).cast("float").alias("wave_height_m"),
+        F.round(F.col("cols")[6], 4).cast("float").alias("wave_direction_deg"),
         F.round(F.cos(F.radians(F.col("cols")[6])), 4).cast("float").alias("wave_cos_direction"),
         F.round(F.sin(F.radians(F.col("cols")[6])), 4).cast("float").alias("wave_sin_direction"),
-        F.round(F.col("cols")[7], 2).cast("float").alias("wave_period_s"),
-        F.round((1/8) * (9.81 * 1026) * F.pow(F.col("cols")[5], 2), 2).cast("float").alias("wave_energy"),
-        F.round(F.col("cols")[5] / F.pow(F.col("cols")[7], 2), 4).cast("float").alias("wave_steepness"),
+        F.round(F.col("cols")[7], 4).cast("float").alias("wave_period_s"),
+        F.round((1/8) * (9.81 * 1026) * F.pow(F.col("cols")[5], 2), 4).cast("float").alias("wave_energy"),
+        F.round((490 * F.pow(F.col("cols")[5], 2) * F.col("cols")[7]) / 1000, 4).cast("float").alias("wave_power_kW_m"),
         
         F.col("ingestion_timestamp"),
         F.col("source_file"),
@@ -94,11 +94,14 @@ df_bronze_raw_swell_metrics_transformed = (
 )
 
 df_bronze_raw_swell_metrics_quality = (
-    df_bronze_raw_swell_metrics_transformed.withColumn(
+    df_bronze_raw_swell_metrics_transformed
+    .withColumn(
+        "flagg_passed_coast_name_check",
+        F.col("coast_name") != ""
+    )
+    .withColumn(
         "flagg_passed_datetime_check",
-        (F.col("datetime").isNotNull()) &
-        (F.col("datetime") >= "1979-01-01") &
-        (F.col("datetime") < "2019-01-01")
+        (F.col("datetime").isNotNull())
     ).withColumn(
         "flagg_passed_wind_speed_ms_checks",
         (F.col("wind_speed_ms").between(0, 100))
@@ -116,6 +119,7 @@ df_bronze_raw_swell_metrics_quality = (
         (F.col("wave_period_s").between(0, 50))
     ).withColumn(
         "flagg_passed_quality_checks",
+        (F.col("flagg_passed_coast_name_check")) &
         (F.col("flagg_passed_datetime_check")) &
         (F.col("flagg_passed_wind_speed_ms_checks")) &
         (F.col("flagg_passed_wind_direction_deg_checks")) &
@@ -127,7 +131,7 @@ df_bronze_raw_swell_metrics_quality = (
 
 df_silver_swell_metrics = df_bronze_raw_swell_metrics_quality.filter(F.col("flagg_passed_quality_checks") == True) \
     .drop(
-        "data", "flagg_passed_datetime_check", "flagg_passed_wind_speed_ms_checks",
+        "data", "flagg_passed_coast_name_check", "flagg_passed_datetime_check", "flagg_passed_wind_speed_ms_checks",
         "flagg_passed_wind_direction_deg_checks", "flagg_passed_wave_height_m_checks", "flagg_passed_wave_direction_deg_checks",
         "flagg_passed_wave_period_s_checks", "flagg_passed_quality_checks"
     )
@@ -151,6 +155,10 @@ df_quarantine_swell_metrics = (
             F.col("data"),
             F.col("source_file"),
             F.concat(
+                F.when(
+                    ~F.col("flagg_passed_coast_name_check"),
+                    F.lit("Nombre costa no identificado; ")
+                ).otherwise(F.lit("")),
                 F.when(
                     ~F.col("flagg_passed_datetime_check"), 
                     F.lit("Fecha invalida; ")
