@@ -190,23 +190,23 @@ spark.sql(
 
 spark.sql(
     f"""
-        CREATE TABLE IF NOT EXISTS cor_{ambiente}.gold.significant_wave_height_forecast (
+        CREATE TABLE IF NOT EXISTS cor_{ambiente}.gold.forecast (
             coast_name STRING
                 COMMENT 'Nombre de la costa a la que corresponden las métricas de olas.',
-            H_50_lower FLOAT
-                COMMENT 'Valor inferior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 50 años, en metros.',
-            H_50_mean FLOAT
-                COMMENT 'Valor medio del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 50 años, en metros.',
-            H_50_upper FLOAT
-                COMMENT 'Valor superior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 50 años, en metros.',
-            H_100_lower FLOAT
-                COMMENT 'Valor inferior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 100 años, en metros.',
-            H_100_mean FLOAT
-                COMMENT 'Valor medio del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 100 años, en metros.',
-            H_100_upper FLOAT
-                COMMENT 'Valor superior del intervalo de confianza al 95% para la prediccion de la altura significativa de las olas en un periodo de 100 años, en metros.',
-            prediction_timestamp TIMESTAMP
-                COMMENT 'Fecha y hora en que se realizó la predicción de la altura significativa de las olas para esta costa.'
+            mean DOUBLE
+                COMMENT 'Valor medio del intervalo de confianza al 95% para la prediccion',
+            lower DOUBLE
+                COMMENT 'Valor inferior del intervalo de confianza al 95% para la prediccion',
+            upper DOUBLE
+                COMMENT 'Valor superior del intervalo de confianza al 95% para la prediccion',
+            metric STRING
+                COMMENT 'Métrica para la cual se realizó la predicción, ',
+            period STRING
+                COMMENT 'Años a futuro para el que se realizó la predicción, puede ser 50 o 100',
+            err_plus DOUBLE
+                COMMENT 'Suma de la media y el valor superior del intervalo',
+            err_minus DOUBLE
+                COMMENT 'Resta de la media y el valor inferior del intervalo'
         )
         USING DELTA
         COMMENT 'Tabla con la predicción de la altura significativa de las olas para cada costa, basada en modelos de predicción. Cada registro contiene el nombre de la costa, 
