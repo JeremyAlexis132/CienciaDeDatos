@@ -34,7 +34,7 @@ SCHEMA_GOLD = "gold"
 
 TBL_DAILY    = f"{CATALOG}.{SCHEMA_GOLD}.wave_daily_summary"
 TBL_CLASS    = f"{CATALOG}.{SCHEMA_GOLD}.wave_monthly_classification"
-TBL_FORECAST = f"{CATALOG}.{SCHEMA_GOLD}.significant_wave_height_forecast"
+TBL_FORECAST = f"{CATALOG}.{SCHEMA_GOLD}.forecast"
 
 SOURCE_LABEL = f"{CATALOG}.{SCHEMA_GOLD} · daily_summary + monthly_classification + forecast"
 
@@ -182,6 +182,29 @@ for coast, meta in COAST_META.items():
     except FileNotFoundError:
         meta["image"] = None  # se queda con el placeholder
         print(f"[falta] {coast}  ->  {ruta}")
+
+# --- Logo de marca (esquina superior del header) -----------------------------
+# Coloca el PNG del logo de Data Minds en esta ruta. Si no existe, el header se
+# muestra sin logo (no rompe nada).
+LOGO_PATH = f"{IMG_DIR}/data_minds_logo.png"
+try:
+    LOGO_IMAGE_URI = img_to_data_uri(LOGO_PATH)
+    print(f"[ok]    logo  ->  {LOGO_PATH}")
+except FileNotFoundError:
+    LOGO_IMAGE_URI = ""
+    print(f"[falta] logo  ->  {LOGO_PATH}  (el header se mostrará sin logo)")
+
+if LOGO_IMAGE_URI:
+    BRAND_HTML = (
+        '<div class="brand">'
+        f'<img class="brand-logo" src="{LOGO_IMAGE_URI}" alt="Data Minds">'
+        '<span class="brand-divider"></span>'
+        '<h1>Monitoreo Costero <em>· Análisis de Oleaje</em><span class="version">V5 · GOLD</span></h1>'
+        '</div>'
+    )
+else:
+    BRAND_HTML = '<h1>Monitoreo Costero <em>· Análisis de Oleaje</em><span class="version">V5 · GOLD</span></h1>'
+
 
 # COMMAND ----------
 
@@ -372,20 +395,52 @@ def build_seastate(coast):
             grid[cls] = [None if v is None else round(v, 1) for v in grid[cls]]
     return {"months": list(range(1, 13)), "series": grid}
 
-def build_forecast(coast):
-    """Última predicción de altura de diseño 50/100 años. None si no hay filas."""
-    f = forecast[forecast["coast_name"] == coast]
-    if f.empty:
+def build_forecast_all():
+    """Estructura GLOBAL para la pestaña Diseño (comparación entre costas).
+    Devuelve {metrics:[...], periods:[... ordenados 50<100 ...],
+              series:{periodo:{metrica:[{coast,mean,lower,upper,err_plus,err_minus}, ...]}}}
+    o None si la tabla forecast está vacía. La barra de error usa err_plus/err_minus;
+    si faltan, se derivan de upper-mean y mean-lower."""
+    import re as _re
+    if forecast is None or forecast.empty:
         return None
-    if "prediction_timestamp" in f.columns and f["prediction_timestamp"].notna().any():
-        f = f.sort_values("prediction_timestamp").iloc[[-1]]
-    row = f.iloc[0]
-    ts = row.get("prediction_timestamp")
-    return {
-        "timestamp": None if pd.isna(ts) else str(ts),
-        "h50":  {"lower": safe(row["H_50_lower"]),  "mean": safe(row["H_50_mean"]),  "upper": safe(row["H_50_upper"])},
-        "h100": {"lower": safe(row["H_100_lower"]), "mean": safe(row["H_100_mean"]), "upper": safe(row["H_100_upper"])},
-    }
+    cols = set(forecast.columns)
+    req = {"coast_name", "mean", "metric", "period"}
+    missing = req - cols
+    if missing:
+        print("[forecast] faltan columnas requeridas:", sorted(missing))
+        return None
+    has_lo, has_up = "lower" in cols, "upper" in cols
+    has_ep, has_em = "err_plus" in cols, "err_minus" in cols
+    metrics, periods, groups = [], [], {}
+    for _, r in forecast.iterrows():
+        metric, period, coast = r.get("metric"), r.get("period"), r.get("coast_name")
+        if metric is None or period is None or coast is None:
+            continue
+        metric, period, coast = str(metric).strip(), str(period).strip(), str(coast).strip()
+        if not metric or not period or not coast:
+            continue
+        if metric not in metrics: metrics.append(metric)
+        if period not in periods: periods.append(period)
+        mean  = safe(r.get("mean"))
+        lower = safe(r.get("lower")) if has_lo else None
+        upper = safe(r.get("upper")) if has_up else None
+        ep    = safe(r.get("err_plus"))  if has_ep else None
+        em    = safe(r.get("err_minus")) if has_em else None
+        if ep is None and mean is not None and upper is not None: ep = round(upper - mean, 2)
+        if em is None and mean is not None and lower is not None: em = round(mean - lower, 2)
+        groups.setdefault((metric, period), []).append({
+            "coast": coast, "mean": mean, "lower": lower, "upper": upper,
+            "err_plus": ep, "err_minus": em,
+        })
+    if not groups:
+        return None
+    def _pk(p):
+        m = _re.search(r"\d+", p)
+        return int(m.group()) if m else 10**9
+    periods = sorted(periods, key=_pk)
+    series = {p: {m: groups.get((m, p), []) for m in metrics} for p in periods}
+    return {"metrics": metrics, "periods": periods, "series": series}
 
 def build_monthly_by_year(coast):
     """{ '<año>': {mean_hs:[12], max_hs:[12], mean_wind:[12], n:[12]} }. None si no hay datos."""
@@ -408,6 +463,22 @@ def build_monthly_by_year(coast):
         slot["n"][mi - 1]          = int(r["n"]) if not pd.isna(r["n"]) else None
     return out or None
 
+# --- Texto explicativo de la pestaña Diseño (edítalo a tu gusto) -------------
+# Cada elemento de la lista es un párrafo. Se renderiza como <p>...</p>.
+DESIGN_INTRO_PARAS = [
+    ("La ola de diseño es el valor extremo de oleaje asociado a un periodo de "
+     "retorno: la altura (o potencia) que, en promedio, se espera igualar o superar "
+     "una vez cada N años. Es la base para dimensionar obras de protección costera "
+     "y estructuras marítimas."),
+]
+DESIGN_INTRO_HTML = "".join(f"<p>{p}</p>" for p in DESIGN_INTRO_PARAS)
+
+FORECAST_ALL = build_forecast_all()
+if FORECAST_ALL:
+    print("[forecast] métricas:", FORECAST_ALL["metrics"], "· periodos:", FORECAST_ALL["periods"])
+else:
+    print("[forecast] sin datos -> la pestaña Diseño mostrará placeholder")
+
 coast_data = {}
 for coast, meta in COAST_META.items():
     base = {
@@ -417,7 +488,6 @@ for coast, meta in COAST_META.items():
         "description": meta["description"], "image": meta["image"],
         "wind_label": WIND_KPI_LABEL,
         "seastate": build_seastate(coast),
-        "forecast": build_forecast(coast),
     }
 
     k_row = kpis[kpis["coast_name"] == coast]
@@ -454,9 +524,8 @@ for coast, meta in COAST_META.items():
         "monthly_by_year": build_monthly_by_year(coast),
     })
     coast_data[meta["id"]] = base
-    fc = "forecast OK" if base["forecast"] else "forecast vacío"
     ss = "estado OK" if base["seastate"] else "estado vacío"
-    print(f"[ok] {coast:<18} ({meta['num']})  Hs̄={k['mean_hs']:.2f}m  Hs_max={k['max_hs']:.2f}m  ·  {ss} · {fc}")
+    print(f"[ok] {coast:<18} ({meta['num']})  Hs̄={k['mean_hs']:.2f}m  Hs_max={k['max_hs']:.2f}m  ·  {ss}")
 
 # COMMAND ----------
 
@@ -585,15 +654,48 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .pane-sea { grid-template-rows: 1fr; }
   .pane-sea .panel { grid-column: 1; }
 
-  /* Diseño */
-  .pane-design { grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 12px; }
-  .design-cards { grid-column: 1 / 3; grid-row: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .design-card { background: #fafafa; border: 1px solid #ececec; border-radius: 6px; padding: 16px 18px; }
-  .design-card .dc-head { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); }
-  .design-card .dc-mean { font-family: 'Fraunces', serif; font-weight: 300; font-size: 44px; line-height: 1.1; color: var(--ink); }
-  .design-card .dc-mean small { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink-faint); }
-  .design-card .dc-ci { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
-  .design-chart-panel { grid-column: 1 / 3; grid-row: 2; }
+  /* Diseño · ola de diseño por costa + comparativa entre costas */
+  .pane-design { position: relative; grid-template-rows: auto auto auto; gap: 12px; height: 100%; overflow-y: auto; overflow-x: hidden; align-content: start; padding-right: 4px; }
+  .design-intro { position: relative; background: #fafafa; border: 1px solid #ececec; border-radius: 6px; padding: 48px 18px 14px; }
+  @media (min-width: 900px) { .design-intro { padding: 14px 250px 14px 18px; } }
+  .design-intro p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+  .design-intro p:last-child { margin-bottom: 0; }
+  .design-toggle { position: absolute; top: 14px; right: 16px; display: inline-flex; border: 1px solid #d0d4d8; border-radius: 999px; overflow: hidden; background: #fff; }
+  .design-toggle button { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: none; background: transparent; color: var(--ink-soft); padding: 7px 14px; cursor: pointer; transition: background .2s, color .2s; }
+  .design-toggle button.active { background: var(--coral); color: #fff; }
+  .design-toggle button:not(.active):hover { background: #f1ece1; color: var(--ink); }
+
+  /* --- Vista por defecto: esta costa, por periodo --- */
+  .design-coast { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+  .period-col { display: flex; flex-direction: column; gap: 10px; }
+  .period-btn { width: 100%; text-align: left; background: #fafafa; border: 1px solid #ececec; border-radius: 6px; padding: 11px 16px; cursor: default; display: flex; flex-direction: column; gap: 3px; }
+  .period-btn .pc-kicker { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+  .period-btn .pc-title { font-family: 'Fraunces', serif; font-weight: 300; font-size: 26px; line-height: 1; color: var(--ink); }
+  .metric-card { background: #fff; border: 1px solid #ececec; border-radius: 6px; overflow: hidden; }
+  .metric-card .mc-bar { height: 86px; }
+  .metric-card .mc-foot { padding: 10px 14px 12px; border-top: 1px solid #f1f1f1; }
+  .metric-card .mc-metric { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); margin-bottom: 5px; }
+  .metric-card .mc-rank { display: flex; align-items: baseline; gap: 8px; }
+  .metric-card .mc-rank-num { font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px; line-height: 1; color: var(--coral); }
+  .metric-card .mc-rank-txt { font-size: 11px; color: var(--ink-soft); line-height: 1.35; }
+  .metric-card .mc-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-top: 5px; }
+
+  /* --- Vista comparativa: todas las costas --- */
+  .design-all-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .period-card { position: relative; background: #fafafa; border: 1px solid #ececec; border-radius: 6px; padding: 13px 18px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: border-color .2s, box-shadow .2s, background .2s; }
+  .period-card:hover { border-color: #d8d2c2; box-shadow: 0 2px 12px rgba(14,34,53,.07); }
+  .period-card.active { border-color: var(--coral); background: #fff; box-shadow: inset 0 0 0 1px var(--coral); }
+  .period-card .pc-kicker { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+  .period-card .pc-title { font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px; line-height: 1; color: var(--ink); }
+  .period-card .pc-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .design-demo-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: var(--coral); border-radius: 4px; padding: 5px 9px; line-height: 1.3; }
+  .design-charts { display: grid; gap: 12px; min-height: 0; }
+  .design-charts.cols-1 { grid-template-columns: 1fr; }
+  .design-charts.cols-2 { grid-template-columns: 1fr 1fr; }
+  .design-charts.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .design-charts .panel { min-height: 420px; }
+  .design-charts .panel .chart { min-height: 360px; }
+  .design-all-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
   /* Descripción */
   .pane-info { grid-template-columns: 1fr 1.1fr; gap: 18px; align-content: start; }
@@ -608,12 +710,50 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   /* Empty / placeholder */
   .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ink-faint); font-family: 'Fraunces', serif; font-style: italic; font-size: 17px; gap: 8px; text-align: center; padding: 30px; min-height: 200px; }
   .empty-state small { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-style: normal; }
+
+  /* === Marca / logo en la esquina del header === */
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-logo { height: 38px; width: auto; display: block; }
+  .brand-divider { width: 1px; height: 26px; background: var(--rule); }
+
+  /* === Vista: modo enfoque (clic en una grafica para ampliarla) === */
+  .panel { position: relative; }
+  .panel[data-chart] { cursor: pointer; transition: box-shadow .2s, border-color .2s; }
+  .panel[data-chart]:hover { border-color: #d8d2c2; box-shadow: 0 2px 12px rgba(14,34,53,.07); }
+  .panel-zoom-cue { position: absolute; top: 9px; right: 11px; font-size: 13px; line-height: 1; color: var(--ink-faint); opacity: .55; pointer-events: none; transition: opacity .2s, color .2s; }
+  .panel[data-chart]:hover .panel-zoom-cue { opacity: 1; color: var(--coral); }
+  .panel-collapse { position: absolute; top: 8px; right: 10px; display: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid #d0d4d8; background: #fff; cursor: pointer; font-size: 16px; line-height: 1; color: var(--ink); align-items: center; justify-content: center; z-index: 6; transition: background .2s, color .2s, transform .2s; }
+  .panel-collapse:hover { background: var(--ink); color: #fff; transform: rotate(90deg); }
+  .panel.is-big .panel-collapse { display: flex; }
+  .panel.is-big .panel-zoom-cue { display: none; }
+  .panel.is-big { cursor: default; }
+
+  .pane-vista.vista-focus {
+    height: 100%;
+    grid-template-columns: 232px 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    grid-template-areas:
+      "filter filter"
+      "slotA  big"
+      "slotB  big";
+  }
+  .pane-vista.vista-focus .vista-filter { grid-area: filter; }
+  .pane-vista.vista-focus .kpi-col { display: none; }
+  .pane-vista.focus-annual .annual-panel,
+  .pane-vista.focus-seasonality .seasonality-panel,
+  .pane-vista.focus-power .power-panel { grid-area: big; }
+  .pane-vista.focus-annual .seasonality-panel { grid-area: slotA; }
+  .pane-vista.focus-annual .power-panel { grid-area: slotB; }
+  .pane-vista.focus-seasonality .annual-panel { grid-area: slotA; }
+  .pane-vista.focus-seasonality .power-panel { grid-area: slotB; }
+  .pane-vista.focus-power .annual-panel { grid-area: slotA; }
+  .pane-vista.focus-power .seasonality-panel { grid-area: slotB; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Monitoreo Costero <em>· Análisis de Oleaje</em><span class="version">V5 · GOLD</span></h1>
+  __BRAND__
   <div class="header-meta">
     <span>Costas · <strong id="coast-count">—</strong></span>
     <span>Fuente · <strong>__SOURCE__</strong></span>
@@ -658,6 +798,9 @@ const SEA_ORDER  = __SEA_ORDER__;
 const SEA_COLORS = __SEA_COLORS__;
 const COLOR_MOSS = "#4B7158";
 const COLOR_CORAL = "#D85D3F";
+const FORECAST = __FORECAST__;
+const DESIGN_PALETTE = ["#D85D3F", "#4B7158", "#1f3a5f", "#C9B45E", "#7C9A66", "#D89A4E"];
+const DESIGN_INTRO_HTML = __DESIGN_INTRO__;
 const MONTH_ABBR = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
 const overlay = document.getElementById("overlay");
@@ -708,7 +851,46 @@ function openModal(id) {
 function closeModal() { backdrop.classList.remove("open"); }
 document.getElementById("modal-close").addEventListener("click", closeModal);
 backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+/* ----- VISTA · modo enfoque (clic para ampliar una gráfica) ----- */
+const vistaPane = document.getElementById("pane-vista");
+
+function resizeVistaCharts() {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ["chart-annual", "chart-seasonality", "chart-power"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.data) { try { Plotly.Plots.resize(el); } catch (_) {} }
+    });
+  }));
+}
+function enterVistaFocus(key) {
+  vistaPane.classList.add("vista-focus");
+  vistaPane.classList.remove("focus-annual", "focus-seasonality", "focus-power");
+  vistaPane.classList.add("focus-" + key);
+  ["annual", "seasonality", "power"].forEach(k => {
+    const p = vistaPane.querySelector(".panel[data-chart='" + k + "']");
+    if (p) { p.classList.toggle("is-big", k === key); p.classList.toggle("is-thumb", k !== key); }
+  });
+  resizeVistaCharts();
+}
+function exitVistaFocus() {
+  vistaPane.classList.remove("vista-focus", "focus-annual", "focus-seasonality", "focus-power");
+  vistaPane.querySelectorAll(".panel.is-big, .panel.is-thumb").forEach(p => p.classList.remove("is-big", "is-thumb"));
+  resizeVistaCharts();
+}
+vistaPane.addEventListener("click", e => {
+  if (e.target.closest(".panel-collapse")) { exitVistaFocus(); return; }
+  const panel = e.target.closest(".panel[data-chart]");
+  if (!panel) return;
+  const key = panel.dataset.chart;
+  if (vistaPane.classList.contains("vista-focus") && vistaPane.classList.contains("focus-" + key)) return;
+  enterVistaFocus(key);
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (vistaPane.classList.contains("vista-focus")) { exitVistaFocus(); return; }
+  closeModal();
+});
 
 document.getElementById("tabbar").addEventListener("click", e => {
   const btn = e.target.closest(".tab"); if (!btn) return;
@@ -718,10 +900,10 @@ function activateTab(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
   document.getElementById("pane-" + name).classList.add("active");
-  if (current && current.has_data && !rendered[name]) {
+  if (!rendered[name]) {
     requestAnimationFrame(() => {
-      if (name === "vista")  renderVista(current);
-      if (name === "sea")    renderSea(current);
+      if (name === "vista"  && current && current.has_data) renderVista(current);
+      if (name === "sea"    && current && current.has_data) renderSea(current);
       if (name === "design") renderDesign(current);
       rendered[name] = true;
     });
@@ -740,6 +922,8 @@ const cfg = { responsive: true, displayModeBar: false };
 /* ----- VISTA ----- */
 function buildVista(d) {
   const pane = document.getElementById("pane-vista");
+  pane.classList.remove("vista-focus", "focus-annual", "focus-seasonality", "focus-power");
+  pane.querySelectorAll(".panel.is-big, .panel.is-thumb").forEach(p => p.classList.remove("is-big", "is-thumb"));
   if (!d.has_data) {
     pane.classList.remove("pane-vista");
     pane.innerHTML = `<div class="empty-state"><div>Esta costa no tiene registros diarios.</div>
@@ -765,9 +949,9 @@ function buildVista(d) {
       <div class="kpi"><div class="kpi-value" id="kpi-max">${d.kpi_max.toFixed(2)}</div><div class="kpi-unit">m</div><div class="kpi-label">Oleaje Máximo</div></div>
       <div class="kpi"><div class="kpi-value" id="kpi-wind">${d.kpi_wind != null ? d.kpi_wind.toFixed(2) : "—"}</div><div class="kpi-unit">m/s</div><div class="kpi-label">${d.wind_label}</div></div>
     </div>
-    <div class="panel annual-panel"><div class="panel-title">Historial Anual de Oleaje Máximo</div><div id="chart-annual" class="chart"></div></div>
-    <div class="panel seasonality-panel"><div class="panel-title">Estacionalidad: Oleaje Promedio vs Extremo</div><div id="chart-seasonality" class="chart"></div></div>
-    <div class="panel power-panel"><div class="panel-title">Estacionalidad: Potencia Media del Oleaje</div><div id="chart-power" class="chart"></div></div>`;
+    <div class="panel annual-panel" data-chart="annual"><button class="panel-collapse" title="Restaurar vista" aria-label="Restaurar vista">×</button><span class="panel-zoom-cue" aria-hidden="true">⤢</span><div class="panel-title">Historial Anual de Oleaje Máximo</div><div id="chart-annual" class="chart"></div></div>
+    <div class="panel seasonality-panel" data-chart="seasonality"><button class="panel-collapse" title="Restaurar vista" aria-label="Restaurar vista">×</button><span class="panel-zoom-cue" aria-hidden="true">⤢</span><div class="panel-title">Estacionalidad: Oleaje Promedio vs Extremo</div><div id="chart-seasonality" class="chart"></div></div>
+    <div class="panel power-panel" data-chart="power"><button class="panel-collapse" title="Restaurar vista" aria-label="Restaurar vista">×</button><span class="panel-zoom-cue" aria-hidden="true">⤢</span><div class="panel-title">Estacionalidad: Potencia Media del Oleaje</div><div id="chart-power" class="chart"></div></div>`;
   setupYearSlider(d);
 }
 
@@ -944,53 +1128,207 @@ function renderSea(d) {
     legend: { orientation: "h", y: -0.22, x: 0, font: { size: 9 } } }, cfg);
 }
 
-/* ----- DISEÑO (forecast 50/100 años) ----- */
+/* ----- DISEÑO · ola de diseño (esta costa) + comparativa (todas) ----- */
+let designPeriod = null;
+let designMode = "coast"; // "coast" (por defecto) | "all" (comparativa)
+
+function fmtPeriodLabel(p) {
+  return /^\d+$/.test(String(p)) ? p + " años" : p;
+}
+function forecastReady() {
+  return FORECAST && FORECAST.periods && FORECAST.periods.length &&
+         FORECAST.metrics && FORECAST.metrics.length;
+}
+
 function buildDesign(d) {
   const pane = document.getElementById("pane-design");
-  if (!d.forecast) {
+  if (!forecastReady()) {
     pane.classList.remove("pane-design");
     pane.innerHTML = `<div class="empty-state">
-      <div>Aún no hay predicciones de altura de diseño para esta costa.</div>
-      <small>la tabla significant_wave_height_forecast está vacía</small></div>`;
+      <div>Aún no hay predicciones de diseño para comparar.</div>
+      <small>la tabla ${"__CATALOG__"}.gold.forecast está vacía</small></div>`;
     return;
   }
   pane.classList.add("pane-design");
-  const f = d.forecast;
-  const card = (titulo, o) => `
-    <div class="design-card">
-      <div class="dc-head">${titulo}</div>
-      <div class="dc-mean">${o.mean != null ? o.mean.toFixed(2) : "—"} <small>m</small></div>
-      <div class="dc-ci">IC 95%: ${o.lower != null ? o.lower.toFixed(2) : "—"} — ${o.upper != null ? o.upper.toFixed(2) : "—"} m</div>
-    </div>`;
-  const ts = f.timestamp ? `Predicción: ${f.timestamp}` : "";
+  designMode = "coast";
+  designPeriod = FORECAST.periods[0];
   pane.innerHTML = `
-    <div class="design-cards">
-      ${card("Altura significante · retorno 50 años", f.h50)}
-      ${card("Altura significante · retorno 100 años", f.h100)}
+    <div class="design-intro" id="design-intro">
+      <div class="design-toggle" id="design-toggle">
+        <button data-mode="coast" class="active">Esta costa</button>
+        <button data-mode="all">Todas las costas</button>
+      </div>
+      ${DESIGN_INTRO_HTML}
     </div>
-    <div class="panel design-chart-panel">
-      <div class="panel-title">Altura de diseño con intervalo de confianza al 95% ${ts ? "· " + ts : ""}</div>
-      <div id="chart-design" class="chart"></div>
-    </div>`;
+    <div id="design-body"></div>`;
+  document.getElementById("design-toggle").addEventListener("click", e => {
+    const btn = e.target.closest("button[data-mode]");
+    if (btn) setDesignMode(btn.dataset.mode, d);
+  });
+  renderDesignBody(d);
 }
+
 function renderDesign(d) {
-  if (!d.forecast) return;
-  const accent = d.color === "moss" ? COLOR_MOSS : COLOR_CORAL;
-  const f = d.forecast;
-  const x = ["50 años", "100 años"];
-  const means = [f.h50.mean, f.h100.mean];
-  const up = [f.h50.upper - f.h50.mean, f.h100.upper - f.h100.mean];
-  const lo = [f.h50.mean - f.h50.lower, f.h100.mean - f.h100.lower];
-  Plotly.newPlot("chart-design", [{
-    x: x, y: means, type: "scatter", mode: "markers",
-    marker: { size: 18, color: accent, line: { color: "white", width: 2 } },
-    error_y: { type: "data", symmetric: false, array: up, arrayminus: lo,
-               color: accent, thickness: 2, width: 14 },
-    hovertemplate: "%{x}<br>Hs: %{y:.2f} m<extra></extra>"
+  if (!forecastReady()) return;
+  if (!designPeriod) designPeriod = FORECAST.periods[0];
+  renderDesignBody(d);
+}
+
+function setDesignMode(mode, d) {
+  if (mode === designMode) return;
+  designMode = mode;
+  document.querySelectorAll("#design-toggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.mode === mode));
+  renderDesignBody(d);
+}
+
+function renderDesignBody(d) {
+  const body = document.getElementById("design-body");
+  if (!body) return;
+  document.querySelectorAll("#design-toggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.mode === designMode));
+  if (designMode === "all") renderDesignAll(body, d);
+  else renderDesignCoast(body, d);
+}
+
+/* -- Ranking de la costa actual dentro de una (metrica, periodo): mas fuerte = 1 -- */
+function coastRank(metric, period, coastName) {
+  const pts = ((FORECAST.series[period] || {})[metric] || [])
+    .filter(p => p && p.mean != null);
+  const sorted = pts.slice().sort((a, b) => b.mean - a.mean); // desc: mas fuerte primero
+  const idx = sorted.findIndex(p => p.coast === coastName);
+  return { rank: idx < 0 ? null : idx + 1, total: sorted.length,
+           point: idx < 0 ? null : sorted[idx] };
+}
+
+/* === Vista por defecto: SOLO esta costa, una columna por periodo === */
+function renderDesignCoast(body, d) {
+  const coastName = d ? d.name : null;
+  const metrics = FORECAST.metrics;
+  body.className = "design-coast";
+  body.innerHTML = FORECAST.periods.map(period => {
+    const cards = metrics.map((m, i) => {
+      const info = coastRank(m, period, coastName);
+      const chartId = `dcoast-${period}-${i}`;
+      const hasPt = info.point && info.point.mean != null;
+      const rankTxt = info.rank
+        ? `<div class="mc-rank"><span class="mc-rank-num">${info.rank}º</span>
+             <span class="mc-rank-txt">de ${info.total} costas<br>de mayor a menor</span></div>`
+        : `<div class="mc-rank-txt">Esta costa no está en el ranking de ${m}.</div>`;
+      const valTxt = hasPt
+        ? `<div class="mc-value">${info.point.mean.toFixed(2)}${
+             (info.point.err_plus != null) ? " ± " + info.point.err_plus.toFixed(2) : ""}</div>`
+        : "";
+      return `<div class="metric-card">
+        <div class="mc-bar"><div id="${chartId}" class="chart" style="height:100%"></div></div>
+        <div class="mc-foot"><div class="mc-metric">${m}</div>${rankTxt}${valTxt}</div>
+      </div>`;
+    }).join("");
+    return `<div class="period-col">
+      <div class="period-btn"><span class="pc-kicker">Periodo de retorno</span>
+        <span class="pc-title">${fmtPeriodLabel(period)}</span></div>
+      ${cards}
+    </div>`;
+  }).join("");
+
+  // render single-bar charts for this coast
+  FORECAST.periods.forEach(period => {
+    metrics.forEach((m, i) => {
+      const info = coastRank(m, period, coastName);
+      renderCoastBar(`dcoast-${period}-${i}`, m, i, info.point, coastName);
+    });
+  });
+}
+
+function renderCoastBar(elId, metric, idx, point, coastName) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!point || point.mean == null) {
+    el.innerHTML = `<div class="empty-state" style="padding:8px"><small>Sin dato para ${coastName || "esta costa"}</small></div>`;
+    return;
+  }
+  const color = DESIGN_PALETTE[idx % DESIGN_PALETTE.length];
+  const ep = point.err_plus  != null ? point.err_plus  : 0;
+  const em = point.err_minus != null ? point.err_minus : 0;
+  Plotly.newPlot(elId, [{
+    type: "bar", orientation: "h",
+    y: [coastName || "—"], x: [point.mean],
+    marker: { color: color, line: { color: "#0E2235", width: 2 } },
+    error_x: { type: "data", symmetric: false, array: [ep], arrayminus: [em],
+               color: color, thickness: 1.6, width: 6 },
+    hovertemplate: (coastName || "—") + "<br>" + metric + ": %{x:.2f}<extra></extra>"
   }], { ...baseLayout,
-    margin: { t: 10, l: 55, r: 20, b: 42 },
-    xaxis: { ...baseLayout.xaxis, title: { text: "Periodo de retorno", font: { size: 10 } } },
-    yaxis: { ...baseLayout.yaxis, title: { text: "Altura significante (m)", font: { size: 10 } }, rangemode: "tozero" } }, cfg);
+    margin: { t: 8, l: 90, r: 16, b: 22 },
+    xaxis: { ...baseLayout.xaxis, rangemode: "tozero", fixedrange: true },
+    yaxis: { ...baseLayout.yaxis, automargin: true, fixedrange: true }
+  }, { ...cfg, staticPlot: false });
+}
+
+/* === Vista comparativa: TODAS las costas (tarjetas de periodo + barras) === */
+function renderDesignAll(body, d) {
+  body.className = "";
+  const cards = FORECAST.periods.map(p => `
+    <div class="period-card" data-period="${p}">
+      <div class="pc-kicker">Periodo de retorno</div>
+      <div class="pc-title">${fmtPeriodLabel(p)}</div>
+      <div class="pc-sub">${FORECAST.metrics.join(" · ")}</div>
+    </div>`).join("");
+  body.innerHTML = `
+    <div class="design-all-head" style="margin-bottom:14px">
+      <div class="design-all-cards" id="design-cards" style="flex:1">${cards}</div>
+      ${FORECAST.demo ? '<div class="design-demo-badge">Datos de ejemplo · regenera el notebook con la tabla real</div>' : ''}
+    </div>
+    <div class="design-charts" id="design-charts"></div>`;
+  if (!designPeriod) designPeriod = FORECAST.periods[0];
+  document.getElementById("design-cards").addEventListener("click", e => {
+    const card = e.target.closest(".period-card");
+    if (card) selectDesignPeriod(card.dataset.period, d);
+  });
+  selectDesignPeriod(designPeriod, d);
+}
+
+function selectDesignPeriod(period, d) {
+  designPeriod = period;
+  document.querySelectorAll("#design-cards .period-card").forEach(c =>
+    c.classList.toggle("active", c.dataset.period === period));
+  const wrap = document.getElementById("design-charts");
+  if (!wrap) return;
+  const metrics = FORECAST.metrics;
+  wrap.className = "design-charts cols-" + Math.min(metrics.length, 3);
+  wrap.innerHTML = metrics.map((m, i) =>
+    `<div class="panel"><div class="panel-title">${m} · ${fmtPeriodLabel(period)}</div>
+       <div id="design-chart-${i}" class="chart"></div></div>`).join("");
+  metrics.forEach((m, i) => renderDesignChart("design-chart-" + i, m, period, i, d));
+}
+
+function renderDesignChart(elId, metric, period, idx, d) {
+  const el = document.getElementById(elId);
+  const pts = (FORECAST.series[period] && FORECAST.series[period][metric]) || [];
+  const clean = pts.filter(p => p && p.mean != null).sort((a, b) => a.mean - b.mean);
+  if (!clean.length) {
+    el.innerHTML = `<div class="empty-state"><div>Sin datos.</div><small>${metric} · ${fmtPeriodLabel(period)}</small></div>`;
+    return;
+  }
+  const color   = DESIGN_PALETTE[idx % DESIGN_PALETTE.length];
+  const curName = d ? d.name : null;
+  const coasts  = clean.map(p => p.coast);
+  const means   = clean.map(p => p.mean);
+  const ep      = clean.map(p => p.err_plus  != null ? p.err_plus  : 0);
+  const em      = clean.map(p => p.err_minus != null ? p.err_minus : 0);
+  const lineCol = coasts.map(c => c === curName ? "#0E2235" : "rgba(0,0,0,0)");
+  const lineW   = coasts.map(c => c === curName ? 2 : 0);
+  Plotly.newPlot(elId, [{
+    type: "bar", orientation: "h",
+    y: coasts, x: means,
+    marker: { color: color, line: { color: lineCol, width: lineW } },
+    error_x: { type: "data", symmetric: false, array: ep, arrayminus: em,
+               color: color, thickness: 1.5, width: 5 },
+    hovertemplate: "%{y}<br>" + metric + ": %{x:.2f}<extra></extra>"
+  }], { ...baseLayout,
+    margin: { t: 8, l: 116, r: 18, b: 38 },
+    xaxis: { ...baseLayout.xaxis, rangemode: "tozero", title: { text: "Valor estimado", font: { size: 10 } } },
+    yaxis: { ...baseLayout.yaxis, automargin: true }
+  }, cfg);
 }
 
 /* ----- DESCRIPCIÓN ----- */
@@ -1021,6 +1359,9 @@ function buildInfo(d) {
 
 html_out = (
     HTML_TEMPLATE
+    .replace("__BRAND__", BRAND_HTML)
+    .replace("__FORECAST__", json.dumps(FORECAST_ALL, ensure_ascii=False))
+    .replace("__DESIGN_INTRO__", json.dumps(DESIGN_INTRO_HTML, ensure_ascii=False))
     .replace("__MAP_IMAGE__", MAP_IMAGE_URI)
     .replace("__DATA__", json.dumps(coast_data, ensure_ascii=False))
     .replace("__SEA_ORDER__", json.dumps(SEA_STATE_ORDER, ensure_ascii=False))
@@ -1045,7 +1386,7 @@ else:
 displayHTML(html_out)
 import os
 
-OUT_NAME = "atlas_costero.html"
+OUT_NAME = "DashboardDataMinds.html"
 
 out_path = os.path.join(os.getcwd(), OUT_NAME)
 with open(out_path, "w", encoding="utf-8") as f:
